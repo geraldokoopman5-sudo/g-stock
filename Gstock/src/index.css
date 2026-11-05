@@ -1,23 +1,31 @@
-﻿:root {
+:root {
   font-family: Inter, 'Segoe UI', Arial, sans-serif;
-  color: #fff;
-  background: #091540;
-  color-scheme: dark;
+  color: var(--color-text);
+  background: var(--color-background);
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --color-icy-blue: #abd2fa;
-  --color-cornflower-blue: #7692ff;
-  --color-persian-blue: #1b2cc1;
-  --color-dusk-blue: #3d518c;
-  --color-deep-navy: #091540;
+  --color-background: var(--color-off-white);
+  --color-surface: var(--color-off-white);
+  --color-surface-muted: color-mix(in srgb, var(--color-off-white) 92%, var(--color-warm-grey));
+  --color-border: color-mix(in srgb, var(--color-warm-grey) 75%, var(--color-mist-blue));
+  --color-accent: var(--color-nordic-blue);
+  --color-text: var(--color-ink);
+  --color-text-secondary: var(--color-muted-ink);
+  --color-accent-text: var(--color-strong-blue);
+  --color-button-background: color-mix(in srgb, var(--color-nordic-blue) 92%, var(--color-ink));
+  --color-button-hover: var(--color-strong-blue);
+  --color-on-accent: var(--color-off-white);
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input { font: inherit; }
 button, a, input { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
-button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--color-icy-blue); outline-offset: 4px; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--color-nordic-blue); outline-offset: 4px; }
 button, input { min-height: 44px; }
 p, h1, h2 { margin: 0; }
+
+::selection { background: var(--color-mist-blue); color: var(--color-ink); }
