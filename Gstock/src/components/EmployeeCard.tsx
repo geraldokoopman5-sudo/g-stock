@@ -1,11 +1,13 @@
 import { useId } from 'react'
 import type { EmployeeProfile } from '../types/employees'
 import ReflectiveCard from './ReflectiveCard'
-import { palette } from '../theme'
+import { getThemeColors } from '../theme'
+import { useTheme } from '../hooks/useTheme'
 import './EmployeeCard.css'
 
 export default function EmployeeCard({ employee }: { employee: EmployeeProfile }) {
   const nameId = useId()
+  const theme = useTheme()
   const initials = employee.fullName.trim().split(/\s+/).slice(0, 2).map((name) => name[0]).join('').toUpperCase()
 
   return (
@@ -13,8 +15,8 @@ export default function EmployeeCard({ employee }: { employee: EmployeeProfile }
       className="employee-card"
       width={400}
       height="auto"
-      theme="light"
-      tint={palette.mistBlue}
+      theme={theme}
+      tint={getThemeColors(theme).mistBlue}
       metalness={0.85}
       roughness={0.35}
       shine={0.8}

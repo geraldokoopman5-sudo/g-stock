@@ -1,0 +1,5 @@
+.theme-control { position: relative; flex: none; }
+.theme-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--color-border); border-radius: 50%; background: rgb(var(--color-surface-rgb) / .8); color: var(--color-accent-text); transition: background .15s, border-color .15s; }
+.theme-toggle:hover { border-color: var(--color-accent); background: var(--color-surface-muted); }
+.theme-control__feedback { position: absolute; z-index: 6; top: calc(100% + 10px); right: 0; width: min(260px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
+@media (prefers-reduced-motion: reduce) { .theme-toggle { transition: none; } }

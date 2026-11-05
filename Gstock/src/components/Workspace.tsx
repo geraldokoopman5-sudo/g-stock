@@ -5,6 +5,7 @@ import EmployeeAccounts from './EmployeeAccounts'
 import Inventory from './Inventory'
 import Warehouses from './Warehouses'
 import Reports from './Reports'
+import ThemeToggle from './ThemeToggle'
 import type { InventoryState, SaveInventoryAction } from '../types/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
 import type { WorkspaceIconName } from './WorkspaceIcon'
@@ -16,7 +17,6 @@ const pages = [
   { id: 'warehouses', label: 'Warehouses', description: 'Warehouse locations, brands, and stock', icon: 'warehouses' },
   { id: 'employees', label: 'Employee accounts', description: 'Your people and departments', icon: 'employees' },
   { id: 'reports', label: 'Reports', description: 'Insights into your operations', icon: 'reports' },
-  { id: 'settings', label: 'Settings', description: 'Workspace and account preferences', icon: 'settings' },
 ] as const satisfies ReadonlyArray<{ id: string; label: string; description: string; icon: WorkspaceIconName }>
 
 function subscribeToPage(onChange: () => void) {
@@ -83,6 +83,7 @@ export default function Workspace({ employee, accounts, onSaveEmployee, inventor
         <a className="brand" href="#home" aria-label="G-Stock home">
           <span className="brand-mark" aria-hidden="true">G</span><span>G-Stock</span>
         </a>
+        <ThemeToggle />
       </header>
       <main className="workspace__main" id="workspace-content">
         {pageId === 'home' ? (
@@ -104,21 +105,8 @@ export default function Workspace({ employee, accounts, onSaveEmployee, inventor
           <Inventory selectedBrandId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
         ) : pageId === 'warehouses' ? (
           <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
-        ) : pageId === 'reports' ? (
-          <Reports catalog={inventory.catalog} activity={inventory.activity} />
         ) : (
-          <section className="workspace__placeholder" aria-labelledby="workspace-heading">
-            <p className="eyebrow">G-STOCK / {page.label.toUpperCase()}</p>
-            <h1 id="workspace-heading" ref={headingRef} tabIndex={-1}>{page.label}</h1>
-            <p className="workspace__description">{page.description}.</p>
-            <div className="workspace__coming-soon">
-              <span className="workspace__page-icon"><WorkspaceIcon name={page.icon} size={32} /></span>
-              <span className="workspace__status">COMING SOON</span>
-              <h2>A place for {page.label.toLowerCase()}.</h2>
-              <p>This part of your workspace is on its way.</p>
-              <a href="#home">Back to your employee card <WorkspaceIcon name="arrow" size={18} /></a>
-            </div>
-          </section>
+          <Reports catalog={inventory.catalog} activity={inventory.activity} />
         )}
       </main>
       <footer className="workspace__footer"><span>G-Stock · Staff workspace</span><span>Everything in its place.</span></footer>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import LoginTransition from './components/LoginTransition'
 import Workspace from './components/Workspace'
+import ThemeToggle from './components/ThemeToggle'
 import { demoEmployee } from './data/employees'
 import { employeeStorageKey, loadEmployeeAccounts, updateEmployeeAccount } from './data/employeeAccounts'
 import { verifyEmployeePassword } from './data/employeePasswords'
@@ -69,10 +70,13 @@ function App() {
       <div className="login-page" inert={screen === 'logout'}>
         <div className="login-layout">
           <section className="welcome" aria-label="G-Stock workspace">
-            <a className="brand" href="./" aria-label="G-Stock home">
-              <span className="brand-mark" aria-hidden="true">G</span>
-              <span>G-Stock</span>
-            </a>
+            <div className="welcome__header">
+              <a className="brand" href="./" aria-label="G-Stock home">
+                <span className="brand-mark" aria-hidden="true">G</span>
+                <span>G-Stock</span>
+              </a>
+              <ThemeToggle />
+            </div>
             <div className="welcome-content">
               <p className="eyebrow">YOUR OPERATIONS, CONNECTED</p>
               <h1>Everything<br />in its place.</h1>

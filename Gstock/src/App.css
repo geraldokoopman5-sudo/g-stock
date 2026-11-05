@@ -1,12 +1,13 @@
 .login-page { min-height: 100svh; display: grid; align-items: center; padding: 48px clamp(24px, 6vw, 96px); background: radial-gradient(ellipse at 15% 45%, rgb(var(--color-mist-blue-rgb) / .3), transparent 60%), var(--color-background); }
 .login-layout { width: 100%; max-width: 1120px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(48px, 8vw, 120px); align-items: center; }
 .welcome { min-height: min(720px, calc(100svh - 96px)); display: flex; flex-direction: column; justify-content: space-between; gap: 48px; }
+.welcome__header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .brand { display: inline-flex; align-items: center; gap: 12px; align-self: flex-start; color: var(--color-text); text-decoration: none; font-size: 24px; font-weight: 700; letter-spacing: -.7px; }
-.brand-mark { display: grid; place-items: center; width: 40px; height: 40px; background: var(--color-nordic-blue); color: var(--color-off-white); border-radius: 10px; font-size: 25px; }
+.brand-mark { display: grid; place-items: center; width: 40px; height: 40px; background: var(--color-accent); color: var(--color-background); border-radius: 10px; font-size: 25px; }
 .eyebrow { font-size: 11px; line-height: 1.6; font-weight: 700; letter-spacing: 2px; }
 .welcome .eyebrow { color: var(--color-text-secondary); margin-bottom: 22px; }
 .welcome h1 { color: var(--color-text); font-size: clamp(48px, 5.4vw, 68px); line-height: 1.08; letter-spacing: -2.5px; font-weight: 700; }
-.monogram { width: 225px; height: 170px; margin: 30px 0; border-radius: 85px 18px 85px 18px; background: linear-gradient(135deg, var(--color-surface), var(--color-mist-blue)); display: grid; place-items: center; color: var(--color-text-secondary); font-size: 78px; font-weight: 700; letter-spacing: -10px; padding-right: 10px; user-select: none; }
+.monogram { width: 225px; height: 170px; margin: 30px 0; border-radius: 85px 18px 85px 18px; background: linear-gradient(135deg, var(--color-surface), color-mix(in srgb, var(--color-surface) 65%, var(--color-mist-blue))); display: grid; place-items: center; color: var(--color-text-secondary); font-size: 78px; font-weight: 700; letter-spacing: -10px; padding-right: 10px; user-select: none; }
 .welcome-description { color: var(--color-text-secondary); font-size: 16px; line-height: 1.65; }
 .welcome footer { color: var(--color-text-secondary); font-size: 12px; }
 .login-card { width: 100%; max-width: 440px; justify-self: end; padding: 40px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: 0 16px 60px rgb(var(--color-ink-rgb) / .06); }

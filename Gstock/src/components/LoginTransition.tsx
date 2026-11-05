@@ -1,6 +1,7 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import LightTunnel from './LightTunnel'
-import { palette, themeColors } from '../theme'
+import { getThemeColors } from '../theme'
+import { useTheme } from '../hooks/useTheme'
 import './LoginTransition.css'
 
 const motionQuery = '(prefers-reduced-motion: reduce)'
@@ -18,6 +19,8 @@ interface LoginTransitionProps {
 
 export default function LoginTransition({ onComplete, mode = 'login' }: LoginTransitionProps) {
   const isLoggingOut = mode === 'logout'
+  const theme = useTheme()
+  const colors = getThemeColors(theme)
   const reduceMotion = useSyncExternalStore(
     subscribeToMotion,
     () => window.matchMedia(motionQuery).matches,
@@ -41,16 +44,16 @@ export default function LoginTransition({ onComplete, mode = 'login' }: LoginTra
       <div className="login-transition__tunnel" aria-hidden="true">
         {!reduceMotion && (
           <LightTunnel
-            cableColor={isLoggingOut ? palette.mistBlue : palette.nordicBlue}
-            pulseColor={isLoggingOut ? palette.offWhite : themeColors.strongBlue}
-            tunnelColor={palette.mistBlue}
+            cableColor={isLoggingOut ? colors.mistBlue : colors.nordicBlue}
+            pulseColor={isLoggingOut || theme === 'dark' ? colors.offWhite : colors.strongBlue}
+            tunnelColor={colors.mistBlue}
             tunnelOpacity={0.24}
             cableCount={56}
             pulseDensity={0.55}
             speed={0.18}
             pulseSpeed={1.4}
             flowDirection={isLoggingOut ? 'outward' : 'inward'}
-            lightMode={!isLoggingOut}
+            lightMode={!isLoggingOut && theme === 'light'}
             sway={0.25}
             bend={0.2}
             glow={0.9}

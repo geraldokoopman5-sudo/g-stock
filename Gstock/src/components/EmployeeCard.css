@@ -1,5 +1,5 @@
 .employee-card { user-select: text; -webkit-user-select: text; }
-.employee-card .reflective-card__content { min-height: 580px; height: auto; padding: 30px; background: linear-gradient(165deg, rgb(var(--color-off-white-rgb) / .5), rgb(var(--color-off-white-rgb) / .92)); }
+.employee-card .reflective-card__content { min-height: 580px; height: auto; padding: 30px; background: linear-gradient(165deg, rgb(var(--color-surface-rgb) / .5), rgb(var(--color-surface-rgb) / .92)); }
 .employee-card__profile { display: flex; flex-direction: column; min-height: 520px; }
 .employee-card__top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .employee-card__brand { color: var(--color-text); font-size: 22px; font-weight: 700; letter-spacing: -1px; }
