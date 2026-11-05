@@ -4,6 +4,8 @@
 .workspace .inventory h1 { font-size: clamp(38px, 5vw, 58px); }
 .inventory__intro { margin-top: 20px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
 .inventory__intro > span { display: block; margin-bottom: 4px; color: var(--color-text); }
+.inventory__intro a { color: var(--color-accent-text); text-underline-offset: 3px; }
+.inventory__actions { margin-top: 24px; }
 .inventory__sample { display: inline-flex; align-items: center; gap: 8px; flex: none; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 20px; color: var(--color-text-secondary); font-size: 10px; }
 .inventory__sample > span { width: 5px; height: 5px; border-radius: 50%; background: var(--color-accent); }
 .inventory__overview { display: grid; grid-template-columns: repeat(3, 1fr); margin: 36px 0 48px; padding: 24px 0; border-block: 1px solid rgb(var(--color-mist-blue-rgb) / 0.502); }
@@ -32,7 +34,7 @@
 .inventory-brand__top { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
 .inventory-brand__monogram { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid rgb(var(--color-nordic-blue-rgb) / 0.3333); border-radius: 14px; color: var(--color-text-secondary); background: linear-gradient(135deg, rgb(var(--color-mist-blue-rgb) / 0.3333), rgb(var(--color-nordic-blue-rgb) / 0.0863)); font-size: 18px; font-weight: 600; letter-spacing: -1px; }
 .inventory-brand__number { color: rgb(var(--color-nordic-blue-rgb) / 0.3333); font-size: 30px; font-weight: 500; letter-spacing: -.06em; }
-.inventory-brand__company { color: var(--color-text-secondary); font-size: 10px; line-height: 1.6; }
+.inventory-brand__warehouse { color: var(--color-text-secondary); font-size: 10px; line-height: 1.6; }
 .inventory-brand h3 { margin: 6px 0 10px; font-size: 24px; font-weight: 500; color: var(--color-text); letter-spacing: -.04em; }
 .inventory-brand__description { color: var(--color-text-secondary); font-size: 12px; line-height: 1.8; }
 .inventory-brand__counts { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin: 24px 0 20px; color: var(--color-text-secondary); font-size: 10px; line-height: 1.7; }

@@ -3,6 +3,8 @@ import type { EmployeeAccount, EmployeeDetails, EmployeeProfile, EmployeeUpdate 
 import { canEditEmployeeAccounts, employeeFieldLabels, employeeFields, restrictEmployeeEditingToManagers } from '../data/employeeAccounts'
 import EmployeeCard from './EmployeeCard'
 import WorkspaceIcon from './WorkspaceIcon'
+import ListPagination from './ListPagination'
+import { usePagination } from '../hooks/usePagination'
 import './EmployeeAccounts.css'
 
 interface EmployeeAccountsProps {
@@ -145,6 +147,9 @@ function EmployeeAccountDetail({ account, viewer, onSave }: {
 export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave }: EmployeeAccountsProps) {
   const [search, setSearch] = useState('')
   const heading = useRef<HTMLHeadingElement>(null)
+  const query = search.trim().toLowerCase()
+  const filtered = accounts.filter(({ profile }) => employeeFields.some((field) => profile[field].toLowerCase().includes(query)))
+  const accountPages = usePagination(filtered, query)
   useEffect(() => { heading.current?.focus() }, [selectedId])
 
   if (selectedId) {
@@ -152,9 +157,6 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave 
     if (account) return <EmployeeAccountDetail key={account.profile.id} account={account} viewer={viewer} onSave={onSave} />
     return <section className="employee-accounts"><h1 ref={heading} tabIndex={-1}>Account not found</h1><a className="employee-accounts__back" href="#employees">Back to employee accounts</a></section>
   }
-
-  const query = search.trim().toLowerCase()
-  const filtered = accounts.filter(({ profile }) => employeeFields.some((field) => profile[field].toLowerCase().includes(query)))
 
   return (
     <section className="employee-accounts" aria-labelledby="employee-accounts-heading">
@@ -169,7 +171,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave 
       </div>
       <div className="employee-accounts__columns" aria-hidden="true"><span>Employee</span><span>Department</span><span>Role</span><span /></div>
       <ul className="employee-accounts__list">
-        {filtered.map(({ profile }) => (
+        {accountPages.items.map(({ profile }) => (
           <li key={profile.id}>
             <a href={`#employees/${encodeURIComponent(profile.id)}`}>
               <span className="employee-accounts__name"><strong>{profile.fullName}</strong><span>{profile.employeeId} · {profile.email}</span></span>
@@ -181,6 +183,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave 
         ))}
       </ul>
       {!filtered.length && <p className="employee-accounts__empty">No employee accounts match your search.</p>}
+      <ListPagination {...accountPages} label="employee accounts" href="#employees" />
     </section>
   )
 }

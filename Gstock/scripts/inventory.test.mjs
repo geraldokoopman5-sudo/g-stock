@@ -23,11 +23,11 @@ test('stock status distinguishes zero stock and the reorder boundary', () => {
   assert.equal(inventory.getStockStatus({ ...item, quantity: item.reorderLevel + 1 }), 'in-stock')
 })
 
-test('brand search finds companies and nested SKUs, and combines company and stock filters', () => {
+test('brand search finds warehouses and nested SKUs, and combines warehouse and stock filters', () => {
   const catalog = inventory.sampleInventory
   assert.deepEqual(inventory.getBrandGroups(catalog, { query: '  nl-002  ' }).map(({ brand }) => brand.id), ['northline'])
   assert.equal(inventory.getBrandGroups(catalog, { query: 'Harbour' }).length, 2)
-  assert.deepEqual(inventory.getBrandGroups(catalog, { companyId: 'summit', status: 'out-of-stock' }).map(({ brand }) => brand.id), ['clearway'])
+  assert.deepEqual(inventory.getBrandGroups(catalog, { warehouseId: 'summit', status: 'out-of-stock' }).map(({ brand }) => brand.id), ['clearway'])
   assert.equal(inventory.getBrandGroups(catalog, { query: 'NL-001', status: 'low-stock' }).length, 0)
   assert.equal(inventory.getBrandGroups(catalog, { query: 'missing-item' }).length, 0)
 })
@@ -64,7 +64,7 @@ test('inventory starts with clickable brands and each brand opens only its wareh
 })
 
 test('empty catalogs, empty brands, and invalid brand links have useful recovery states', () => {
-  const catalog = { companies: [], brands: [], items: [] }
+  const catalog = { warehouses: [], brands: [], items: [] }
   assert.ok(renderToStaticMarkup(React.createElement(Inventory, { catalog })).includes('No brands added yet'))
   const emptyBrand = { ...inventory.sampleInventory, items: [] }
   assert.ok(renderToStaticMarkup(React.createElement(Inventory, { catalog: emptyBrand, selectedBrandId: 'northline' })).includes('No items in this brand yet'))

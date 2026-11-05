@@ -3,18 +3,18 @@ import type { InventoryCatalog, InventoryFilters, InventoryItem, StockStatus } f
 // Fictional warehouse stock for the first inventory preview.
 // Replace this catalog when the warehouse's actual brands and products are defined.
 export const sampleInventory: InventoryCatalog = {
-  companies: [
-    { id: 'harbour', name: 'Harbour Supply Co.' },
-    { id: 'cedar', name: 'Cedar Industrial' },
-    { id: 'summit', name: 'Summit Warehouse Supply' },
+  warehouses: [
+    { id: 'harbour', name: 'Harbour Warehouse' },
+    { id: 'cedar', name: 'Cedar Warehouse' },
+    { id: 'summit', name: 'Summit Warehouse' },
   ],
   brands: [
-    { id: 'northline', companyId: 'harbour', name: 'Northline', description: 'Packaging for every dispatch.', initials: 'NL' },
-    { id: 'packwell', companyId: 'harbour', name: 'Packwell', description: 'Storage that keeps things in place.', initials: 'PW' },
-    { id: 'forge', companyId: 'cedar', name: 'Forge', description: 'Tools for the warehouse floor.', initials: 'FG' },
-    { id: 'voltline', companyId: 'cedar', name: 'Voltline', description: 'Electrical supplies and essentials.', initials: 'VL' },
-    { id: 'clearway', companyId: 'summit', name: 'Clearway', description: 'Cleaning and daily maintenance.', initials: 'CW' },
-    { id: 'fieldwork', companyId: 'summit', name: 'Fieldwork', description: 'Safety gear for your team.', initials: 'FW' },
+    { id: 'northline', warehouseId: 'harbour', name: 'Northline', description: 'Packaging for every dispatch.', initials: 'NL' },
+    { id: 'packwell', warehouseId: 'harbour', name: 'Packwell', description: 'Storage that keeps things in place.', initials: 'PW' },
+    { id: 'forge', warehouseId: 'cedar', name: 'Forge', description: 'Tools for the warehouse floor.', initials: 'FG' },
+    { id: 'voltline', warehouseId: 'cedar', name: 'Voltline', description: 'Electrical supplies and essentials.', initials: 'VL' },
+    { id: 'clearway', warehouseId: 'summit', name: 'Clearway', description: 'Cleaning and daily maintenance.', initials: 'CW' },
+    { id: 'fieldwork', warehouseId: 'summit', name: 'Fieldwork', description: 'Safety gear for your team.', initials: 'FW' },
   ],
   items: [
     { id: 'nl-001', brandId: 'northline', sku: 'NL-001', name: 'Medium shipping boxes', category: 'Packaging', location: 'A-01-01', quantity: 240, unit: 'units', reorderLevel: 50 },
@@ -43,10 +43,10 @@ export function getStockStatus(item: InventoryItem): StockStatus {
 
 function matchesItem(catalog: InventoryCatalog, item: InventoryItem, filters: InventoryFilters) {
   const brand = catalog.brands.find((entry) => entry.id === item.brandId)
-  const company = catalog.companies.find((entry) => entry.id === brand?.companyId)
+  const warehouse = catalog.warehouses.find((entry) => entry.id === brand?.warehouseId)
   const query = filters.query?.trim().toLowerCase() ?? ''
   return (!filters.status || filters.status === 'all' || getStockStatus(item) === filters.status)
-    && [item.name, item.sku, item.category, item.location, brand?.name ?? '', brand?.description ?? '', company?.name ?? ''].some((value) => value.toLowerCase().includes(query))
+    && [item.name, item.sku, item.category, item.location, brand?.name ?? '', brand?.description ?? '', warehouse?.name ?? ''].some((value) => value.toLowerCase().includes(query))
 }
 
 export function getBrandItems(catalog: InventoryCatalog, brandId: string, filters: InventoryFilters = {}) {
@@ -63,12 +63,12 @@ export function getInventorySummary(catalog: InventoryCatalog) {
 export function getBrandGroups(catalog: InventoryCatalog, filters: InventoryFilters = {}) {
   const query = filters.query?.trim().toLowerCase() ?? ''
   return catalog.brands.map((brand) => {
-    const company = catalog.companies.find((entry) => entry.id === brand.companyId)
+    const warehouse = catalog.warehouses.find((entry) => entry.id === brand.warehouseId)
     const items = catalog.items.filter((item) => item.brandId === brand.id)
-    return { brand, company, items, needsAttention: items.filter((item) => getStockStatus(item) !== 'in-stock').length }
-  }).filter(({ brand, company, items }) => {
-    if (filters.companyId && filters.companyId !== 'all' && brand.companyId !== filters.companyId) return false
-    const brandMatches = [brand.name, brand.description, company?.name ?? ''].some((value) => value.toLowerCase().includes(query))
+    return { brand, warehouse, items, needsAttention: items.filter((item) => getStockStatus(item) !== 'in-stock').length }
+  }).filter(({ brand, warehouse, items }) => {
+    if (filters.warehouseId && filters.warehouseId !== 'all' && brand.warehouseId !== filters.warehouseId) return false
+    const brandMatches = [brand.name, brand.description, warehouse?.name ?? ''].some((value) => value.toLowerCase().includes(query))
     const statusMatches = !filters.status || filters.status === 'all' || items.some((item) => getStockStatus(item) === filters.status)
     return statusMatches && (brandMatches || items.some((item) => matchesItem(catalog, item, filters)))
   }).sort((a, b) => a.brand.name.localeCompare(b.brand.name))

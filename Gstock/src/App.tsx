@@ -5,11 +5,14 @@ import { demoEmployee } from './data/employees'
 import { employeeStorageKey, loadEmployeeAccounts, updateEmployeeAccount } from './data/employeeAccounts'
 import { verifyEmployeePassword } from './data/employeePasswords'
 import type { EmployeeUpdate } from './types/employees'
+import type { InventoryAction, InventorySaveResult } from './types/inventory'
+import { applyInventoryAction, loadInventoryState, persistInventoryState } from './data/inventoryStore'
 import './App.css'
 
 function App() {
   const [showPassword, setShowPassword] = useState(false)
   const [accounts, setAccounts] = useState(loadEmployeeAccounts)
+  const [inventory, setInventory] = useState(loadInventoryState)
   const [employeeId, setEmployeeId] = useState(demoEmployee.id)
   const [signingIn, setSigningIn] = useState(false)
   const [loginError, setLoginError] = useState('')
@@ -31,6 +34,18 @@ function App() {
     return null
   }
 
+  function saveInventory(action: InventoryAction): InventorySaveResult {
+    const result = applyInventoryAction(inventory, employee, action)
+    if (!result.ok) return result
+    try {
+      persistInventoryState(result.state)
+    } catch {
+      return { ok: false, error: 'Your browser could not save this change. Check browser storage and try again.' }
+    }
+    setInventory(result.state)
+    return { ok: true, entityId: result.entityId }
+  }
+
   useEffect(() => {
     if (screen === 'login') emailRef.current?.focus()
   }, [screen])
@@ -38,7 +53,7 @@ function App() {
   if (screen === 'intro' || screen === 'workspace') {
     return (
       <>
-        <Workspace employee={employee} accounts={accounts} onSaveEmployee={saveEmployee} active={screen === 'workspace'} onSignOut={() => {
+        <Workspace employee={employee} accounts={accounts} onSaveEmployee={saveEmployee} inventory={inventory} onInventoryAction={saveInventory} active={screen === 'workspace'} onSignOut={() => {
           window.history.replaceState(null, '', window.location.pathname + window.location.search)
           setShowPassword(false)
           setLoginError('')
@@ -62,7 +77,7 @@ function App() {
               <p className="eyebrow">YOUR OPERATIONS, CONNECTED</p>
               <h1>Everything<br />in its place.</h1>
               <div className="monogram" aria-hidden="true">GS</div>
-              <p className="welcome-description">Stay on top of stock.<br />Keep orders moving.</p>
+              <p className="welcome-description">Stay on top of stock.<br />Keep your warehouse moving.</p>
             </div>
             <footer>G-Stock <span aria-hidden="true">·</span> Staff workspace</footer>
           </section>
@@ -96,7 +111,7 @@ function App() {
             }}>
               <div className="field">
                 <label htmlFor="email">Email address</label>
-                <input disabled={signingIn} ref={emailRef} id="email" name="email" type="email" placeholder="you@company.co.za" autoComplete="username" required />
+                <input disabled={signingIn} ref={emailRef} id="email" name="email" type="email" placeholder="you@warehouse.co.za" autoComplete="username" required />
               </div>
               <div className="field">
                 <label htmlFor="password">Password</label>

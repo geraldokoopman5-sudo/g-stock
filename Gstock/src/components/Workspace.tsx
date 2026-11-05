@@ -3,6 +3,8 @@ import type { EmployeeAccount, EmployeeProfile, EmployeeUpdate } from '../types/
 import EmployeeCard from './EmployeeCard'
 import EmployeeAccounts from './EmployeeAccounts'
 import Inventory from './Inventory'
+import Warehouses from './Warehouses'
+import type { InventoryState, SaveInventoryAction } from '../types/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
 import type { WorkspaceIconName } from './WorkspaceIcon'
 import './Workspace.css'
@@ -10,7 +12,7 @@ import './Workspace.css'
 const pages = [
   { id: 'home', label: 'Home', description: 'Your employee card', icon: 'home' },
   { id: 'inventory', label: 'Inventory', description: 'Stock, products, and quantities', icon: 'inventory' },
-  { id: 'orders', label: 'Orders', description: 'Orders and fulfilment', icon: 'orders' },
+  { id: 'warehouses', label: 'Warehouses', description: 'Warehouse locations, brands, and stock', icon: 'warehouses' },
   { id: 'employees', label: 'Employee accounts', description: 'Your people and departments', icon: 'employees' },
   { id: 'reports', label: 'Reports', description: 'Insights into your operations', icon: 'reports' },
   { id: 'settings', label: 'Settings', description: 'Workspace and account preferences', icon: 'settings' },
@@ -22,18 +24,20 @@ function subscribeToPage(onChange: () => void) {
 }
 
 function currentPage() {
-  return window.location.hash || '#home'
+  return (window.location.hash || '#home').replace(/^#companies(?=\/|$)/, '#warehouses')
 }
 
 interface WorkspaceProps {
   employee: EmployeeProfile
   accounts: EmployeeAccount[]
   onSaveEmployee: (accountId: string, details: EmployeeUpdate) => Promise<string | null>
+  inventory: InventoryState
+  onInventoryAction: SaveInventoryAction
   active: boolean
   onSignOut: () => void
 }
 
-export default function Workspace({ employee, accounts, onSaveEmployee, active, onSignOut }: WorkspaceProps) {
+export default function Workspace({ employee, accounts, onSaveEmployee, inventory, onInventoryAction, active, onSignOut }: WorkspaceProps) {
   const route = useSyncExternalStore(subscribeToPage, currentPage, () => '#home')
   const [routePage, selectedId] = route.slice(1).split('/')
   const page = pages.find((entry) => entry.id === routePage) ?? pages[0]
@@ -96,7 +100,9 @@ export default function Workspace({ employee, accounts, onSaveEmployee, active, 
         ) : pageId === 'employees' ? (
           <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} />
         ) : pageId === 'inventory' ? (
-          <Inventory selectedBrandId={selectedId} />
+          <Inventory selectedBrandId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
+        ) : pageId === 'warehouses' ? (
+          <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
         ) : (
           <section className="workspace__placeholder" aria-labelledby="workspace-heading">
             <p className="eyebrow">G-STOCK / {page.label.toUpperCase()}</p>

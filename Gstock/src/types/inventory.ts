@@ -1,11 +1,14 @@
-export interface InventoryCompany {
+export interface InventoryWarehouse {
   id: string
   name: string
+  contactName?: string
+  contactEmail?: string
+  notes?: string
 }
 
 export interface InventoryBrand {
   id: string
-  companyId: string
+  warehouseId: string
   name: string
   description: string
   initials: string
@@ -24,7 +27,7 @@ export interface InventoryItem {
 }
 
 export interface InventoryCatalog {
-  companies: readonly InventoryCompany[]
+  warehouses: readonly InventoryWarehouse[]
   brands: readonly InventoryBrand[]
   items: readonly InventoryItem[]
 }
@@ -35,5 +38,45 @@ export type StockFilter = StockStatus | 'all'
 export interface InventoryFilters {
   query?: string
   status?: StockFilter
-  companyId?: string
+  warehouseId?: string
 }
+
+export interface InventoryActor {
+  id: string
+  employeeId: string
+  fullName: string
+}
+
+export interface InventoryActivity {
+  id: string
+  type: 'warehouse-created' | 'brand-created' | 'item-created' | 'quantity-updated'
+  entityId: string
+  entityName: string
+  warehouseId: string
+  brandId?: string
+  occurredAt: string
+  actor: InventoryActor
+  reason?: string
+  previousQuantity?: number
+  quantity?: number
+}
+
+export interface InventoryState {
+  version: 2
+  catalog: InventoryCatalog
+  activity: readonly InventoryActivity[]
+}
+
+export type NewWarehouse = Omit<InventoryWarehouse, 'id'>
+export type NewBrand = Pick<InventoryBrand, 'warehouseId' | 'name' | 'description'>
+export type NewStockItem = Omit<InventoryItem, 'id'>
+export type QuantityMode = 'add' | 'remove' | 'set'
+export type InventoryAction =
+  | { type: 'add-warehouse'; input: NewWarehouse }
+  | { type: 'add-brand'; input: NewBrand }
+  | { type: 'add-item'; input: NewStockItem }
+  | { type: 'adjust-quantity'; itemId: string; mode: QuantityMode; quantity: number; expectedQuantity: number; reason: string }
+
+export type InventorySaveResult = { ok: true; entityId: string } | { ok: false; error: string }
+export type InventoryMutationResult = { ok: true; entityId: string; state: InventoryState } | { ok: false; error: string }
+export type SaveInventoryAction = (action: InventoryAction) => InventorySaveResult
