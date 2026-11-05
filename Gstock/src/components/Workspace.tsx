@@ -4,6 +4,7 @@ import EmployeeCard from './EmployeeCard'
 import EmployeeAccounts from './EmployeeAccounts'
 import Inventory from './Inventory'
 import Warehouses from './Warehouses'
+import Reports from './Reports'
 import type { InventoryState, SaveInventoryAction } from '../types/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
 import type { WorkspaceIconName } from './WorkspaceIcon'
@@ -103,6 +104,8 @@ export default function Workspace({ employee, accounts, onSaveEmployee, inventor
           <Inventory selectedBrandId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
         ) : pageId === 'warehouses' ? (
           <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
+        ) : pageId === 'reports' ? (
+          <Reports catalog={inventory.catalog} activity={inventory.activity} />
         ) : (
           <section className="workspace__placeholder" aria-labelledby="workspace-heading">
             <p className="eyebrow">G-STOCK / {page.label.toUpperCase()}</p>

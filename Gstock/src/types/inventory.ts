@@ -17,9 +17,8 @@ export interface InventoryBrand {
 export interface InventoryItem {
   id: string
   brandId: string
-  sku: string
+  sku?: string
   name: string
-  category: string
   location: string
   quantity: number
   unit: 'units' | 'boxes' | 'rolls' | 'cases' | 'pairs'
@@ -59,6 +58,7 @@ export interface InventoryActivity {
   reason?: string
   previousQuantity?: number
   quantity?: number
+  unit?: InventoryItem['unit']
 }
 
 export interface InventoryState {

@@ -102,7 +102,7 @@ function catalogFixture() {
   return {
     warehouses: Array.from({ length: 25 }, (_, index) => ({ id: `warehouse-${index}`, name: `Warehouse ${String(index + 1).padStart(2, '0')}` })),
     brands: Array.from({ length: 25 }, (_, index) => ({ id: `brand-${index}`, warehouseId: 'warehouse-0', name: `Brand ${String(index + 1).padStart(2, '0')}`, initials: 'B', description: '' })),
-    items: Array.from({ length: 45 }, (_, index) => ({ id: `item-${index}`, brandId: 'brand-0', sku: `SKU-${String(index + 1).padStart(2, '0')}`, name: `Item ${String(index + 1).padStart(2, '0')}`, category: 'Storage', location: 'A-01', quantity: 10, reorderLevel: 2, unit: 'units' })),
+    items: Array.from({ length: 45 }, (_, index) => ({ id: `item-${index}`, brandId: 'brand-0', sku: `SKU-${String(index + 1).padStart(2, '0')}`, name: `Item ${String(index + 1).padStart(2, '0')}`, location: 'A-01', quantity: 10, reorderLevel: 2, unit: 'units' })),
   }
 }
 

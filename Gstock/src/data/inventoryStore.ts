@@ -22,19 +22,21 @@ function isInventoryState(value: unknown): value is InventoryState {
     && ['contactName', 'contactEmail', 'notes'].every((field) => warehouse[field] === undefined || (typeof warehouse[field] === 'string' && warehouse[field].length <= (field === 'notes' ? 1000 : 254))))) return false
   if (!brands.every((brand: unknown) => isRecord(brand) && validText(brand.id) && validText(brand.name) && validText(brand.warehouseId)
     && warehouses.some((warehouse) => warehouse.id === brand.warehouseId) && typeof brand.description === 'string' && brand.description.length <= 250 && validText(brand.initials, 3))) return false
-  if (!items.every((item: unknown) => isRecord(item) && validText(item.id) && validText(item.sku, 40) && validText(item.name)
-    && validText(item.category, 80) && validText(item.location, 80) && validText(item.brandId) && brands.some((brand) => brand.id === item.brandId)
+  if (!items.every((item: unknown) => isRecord(item) && validText(item.id) && (item.sku === undefined || (typeof item.sku === 'string' && item.sku.length <= 40)) && validText(item.name)
+    && validText(item.location, 80) && validText(item.brandId) && brands.some((brand) => brand.id === item.brandId)
     && inventoryUnits.some((unit) => unit === item.unit) && isQuantity(item.quantity) && isQuantity(item.reorderLevel))) return false
   const unique = (entries: Record<string, unknown>[], field: string) => new Set(entries.map((entry) => keyOf(String(entry[field])))).size === entries.length
   if (!unique(warehouses, 'id') || !unique(warehouses, 'name') || !unique(brands, 'id') || !unique(items, 'id')) return false
   if (new Set(brands.map((brand) => `${brand.warehouseId}/${keyOf(brand.name)}`)).size !== brands.length) return false
-  if (new Set(items.map((item) => `${brands.find((brand) => brand.id === item.brandId)?.warehouseId}/${keyOf(item.sku)}`)).size !== items.length) return false
+  const itemsWithSku = items.filter((item) => typeof item.sku === 'string' && item.sku.trim())
+  if (new Set(itemsWithSku.map((item) => `${brands.find((brand) => brand.id === item.brandId)?.warehouseId}/${keyOf(item.sku)}`)).size !== itemsWithSku.length) return false
   return value.activity.every((event: unknown) => isRecord(event) && validText(event.id) && ['warehouse-created', 'brand-created', 'item-created', 'quantity-updated'].includes(String(event.type))
     && validText(event.entityId) && validText(event.entityName) && warehouses.some((warehouse) => warehouse.id === event.warehouseId)
     && typeof event.occurredAt === 'string' && Number.isFinite(Date.parse(event.occurredAt))
     && isRecord(event.actor) && validText(event.actor.id) && validText(event.actor.employeeId) && validText(event.actor.fullName)
     && (event.reason === undefined || (typeof event.reason === 'string' && event.reason.length <= 500))
-    && (event.previousQuantity === undefined || isQuantity(event.previousQuantity)) && (event.quantity === undefined || isQuantity(event.quantity)))
+    && (event.previousQuantity === undefined || isQuantity(event.previousQuantity)) && (event.quantity === undefined || isQuantity(event.quantity))
+    && (event.unit === undefined || inventoryUnits.some((unit) => unit === event.unit)))
 }
 
 function migrateLegacyInventory(value: unknown): unknown {
@@ -110,12 +112,13 @@ export function applyInventoryAction(state: InventoryState, actor: InventoryActo
     const input = action.input
     const brand = catalog.brands.find((entry) => entry.id === input.brandId)
     if (!brand) return { ok: false, error: 'Choose an existing brand for this stock item.' }
-    const item = { id: crypto.randomUUID(), brandId: brand.id, sku: input.sku.trim(), name: input.name.trim(), category: input.category.trim(), location: input.location.trim(), quantity: input.quantity, unit: input.unit, reorderLevel: input.reorderLevel }
-    if (!validText(item.name) || !validText(item.sku, 40) || !validText(item.category, 80) || !validText(item.location, 80)) return { ok: false, error: 'Enter an item name, SKU, category, and warehouse location within the field limits.' }
+    const sku = input.sku?.trim() ?? ''
+    const item = { id: crypto.randomUUID(), brandId: brand.id, ...(sku ? { sku } : {}), name: input.name.trim(), location: input.location.trim(), quantity: input.quantity, unit: input.unit, reorderLevel: input.reorderLevel }
+    if (!validText(item.name) || !validText(item.location, 80) || sku.length > 40) return { ok: false, error: 'Enter an item name and warehouse location within the field limits. An optional SKU can be up to 40 characters.' }
     if (!inventoryUnits.includes(item.unit) || !isQuantity(item.quantity) || !isQuantity(item.reorderLevel)) return { ok: false, error: `Choose a unit and use whole-number quantities between 0 and ${maxStockQuantity.toLocaleString('en-ZA')}.` }
     const warehouseBrandIds = new Set(catalog.brands.filter((entry) => entry.warehouseId === brand.warehouseId).map((entry) => entry.id))
-    if (catalog.items.some((entry) => warehouseBrandIds.has(entry.brandId) && keyOf(entry.sku) === keyOf(item.sku))) return { ok: false, error: 'This SKU is already used by another item for this warehouse.' }
-    return record({ type: 'item-created', entityId: item.id, entityName: item.name, warehouseId: brand.warehouseId, brandId: brand.id, quantity: item.quantity, reason: 'Opening stock' }, { ...catalog, items: [...catalog.items, item] })
+    if (sku && catalog.items.some((entry) => warehouseBrandIds.has(entry.brandId) && keyOf(entry.sku ?? '') === keyOf(sku))) return { ok: false, error: 'This SKU is already used by another item for this warehouse.' }
+    return record({ type: 'item-created', entityId: item.id, entityName: item.name, warehouseId: brand.warehouseId, brandId: brand.id, quantity: item.quantity, unit: item.unit, reason: 'Opening stock' }, { ...catalog, items: [...catalog.items, item] })
   }
 
   const item = catalog.items.find((entry) => entry.id === action.itemId)
@@ -128,5 +131,5 @@ export function applyInventoryAction(state: InventoryState, actor: InventoryActo
   if (!isQuantity(quantity)) return { ok: false, error: 'This update would make the stock negative or exceed the quantity limit.' }
   if (quantity === item.quantity) return { ok: false, error: 'The quantity has not changed.' }
   const brand = catalog.brands.find((entry) => entry.id === item.brandId)!
-  return record({ type: 'quantity-updated', entityId: item.id, entityName: item.name, warehouseId: brand.warehouseId, brandId: brand.id, previousQuantity: item.quantity, quantity, reason }, { ...catalog, items: catalog.items.map((entry) => entry.id === item.id ? { ...entry, quantity } : entry) })
+  return record({ type: 'quantity-updated', entityId: item.id, entityName: item.name, warehouseId: brand.warehouseId, brandId: brand.id, previousQuantity: item.quantity, quantity, unit: item.unit, reason }, { ...catalog, items: catalog.items.map((entry) => entry.id === item.id ? { ...entry, quantity } : entry) })
 }

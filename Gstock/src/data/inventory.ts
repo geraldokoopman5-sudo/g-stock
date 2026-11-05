@@ -17,18 +17,18 @@ export const sampleInventory: InventoryCatalog = {
     { id: 'fieldwork', warehouseId: 'summit', name: 'Fieldwork', description: 'Safety gear for your team.', initials: 'FW' },
   ],
   items: [
-    { id: 'nl-001', brandId: 'northline', sku: 'NL-001', name: 'Medium shipping boxes', category: 'Packaging', location: 'A-01-01', quantity: 240, unit: 'units', reorderLevel: 50 },
-    { id: 'nl-002', brandId: 'northline', sku: 'NL-002', name: 'Clear packing tape', category: 'Packaging', location: 'A-01-02', quantity: 12, unit: 'rolls', reorderLevel: 20 },
-    { id: 'pw-001', brandId: 'packwell', sku: 'PW-001', name: 'Stackable storage bins', category: 'Storage', location: 'A-02-01', quantity: 64, unit: 'units', reorderLevel: 15 },
-    { id: 'pw-002', brandId: 'packwell', sku: 'PW-002', name: 'Pallet stretch wrap', category: 'Packaging', location: 'A-02-02', quantity: 38, unit: 'rolls', reorderLevel: 10 },
-    { id: 'fg-001', brandId: 'forge', sku: 'FG-001', name: 'Heavy-duty utility knives', category: 'Tools', location: 'B-01-01', quantity: 8, unit: 'units', reorderLevel: 10 },
-    { id: 'fg-002', brandId: 'forge', sku: 'FG-002', name: 'Replacement blade packs', category: 'Tools', location: 'B-01-02', quantity: 45, unit: 'boxes', reorderLevel: 12 },
-    { id: 'vl-001', brandId: 'voltline', sku: 'VL-001', name: 'Extension leads, 10 m', category: 'Electrical', location: 'B-02-01', quantity: 28, unit: 'units', reorderLevel: 8 },
-    { id: 'vl-002', brandId: 'voltline', sku: 'VL-002', name: 'Cable ties, assorted', category: 'Electrical', location: 'B-02-02', quantity: 16, unit: 'boxes', reorderLevel: 5 },
-    { id: 'cw-001', brandId: 'clearway', sku: 'CW-001', name: 'Floor cleaner, 5 L', category: 'Cleaning', location: 'C-01-01', quantity: 0, unit: 'units', reorderLevel: 6 },
-    { id: 'cw-002', brandId: 'clearway', sku: 'CW-002', name: 'Industrial cleaning cloths', category: 'Cleaning', location: 'C-01-02', quantity: 24, unit: 'boxes', reorderLevel: 8 },
-    { id: 'fw-001', brandId: 'fieldwork', sku: 'FW-001', name: 'Protective work gloves', category: 'Safety', location: 'C-02-01', quantity: 20, unit: 'pairs', reorderLevel: 20 },
-    { id: 'fw-002', brandId: 'fieldwork', sku: 'FW-002', name: 'High-visibility vests', category: 'Safety', location: 'C-02-02', quantity: 54, unit: 'units', reorderLevel: 12 },
+    { id: 'nl-001', brandId: 'northline', sku: 'NL-001', name: 'Medium shipping boxes', location: 'A-01-01', quantity: 240, unit: 'units', reorderLevel: 50 },
+    { id: 'nl-002', brandId: 'northline', sku: 'NL-002', name: 'Clear packing tape', location: 'A-01-02', quantity: 12, unit: 'rolls', reorderLevel: 20 },
+    { id: 'pw-001', brandId: 'packwell', sku: 'PW-001', name: 'Stackable storage bins', location: 'A-02-01', quantity: 64, unit: 'units', reorderLevel: 15 },
+    { id: 'pw-002', brandId: 'packwell', sku: 'PW-002', name: 'Pallet stretch wrap', location: 'A-02-02', quantity: 38, unit: 'rolls', reorderLevel: 10 },
+    { id: 'fg-001', brandId: 'forge', sku: 'FG-001', name: 'Heavy-duty utility knives', location: 'B-01-01', quantity: 8, unit: 'units', reorderLevel: 10 },
+    { id: 'fg-002', brandId: 'forge', sku: 'FG-002', name: 'Replacement blade packs', location: 'B-01-02', quantity: 45, unit: 'boxes', reorderLevel: 12 },
+    { id: 'vl-001', brandId: 'voltline', sku: 'VL-001', name: 'Extension leads, 10 m', location: 'B-02-01', quantity: 28, unit: 'units', reorderLevel: 8 },
+    { id: 'vl-002', brandId: 'voltline', sku: 'VL-002', name: 'Cable ties, assorted', location: 'B-02-02', quantity: 16, unit: 'boxes', reorderLevel: 5 },
+    { id: 'cw-001', brandId: 'clearway', sku: 'CW-001', name: 'Floor cleaner, 5 L', location: 'C-01-01', quantity: 0, unit: 'units', reorderLevel: 6 },
+    { id: 'cw-002', brandId: 'clearway', sku: 'CW-002', name: 'Industrial cleaning cloths', location: 'C-01-02', quantity: 24, unit: 'boxes', reorderLevel: 8 },
+    { id: 'fw-001', brandId: 'fieldwork', sku: 'FW-001', name: 'Protective work gloves', location: 'C-02-01', quantity: 20, unit: 'pairs', reorderLevel: 20 },
+    { id: 'fw-002', brandId: 'fieldwork', sku: 'FW-002', name: 'High-visibility vests', location: 'C-02-02', quantity: 54, unit: 'units', reorderLevel: 12 },
   ],
 }
 
@@ -46,7 +46,7 @@ function matchesItem(catalog: InventoryCatalog, item: InventoryItem, filters: In
   const warehouse = catalog.warehouses.find((entry) => entry.id === brand?.warehouseId)
   const query = filters.query?.trim().toLowerCase() ?? ''
   return (!filters.status || filters.status === 'all' || getStockStatus(item) === filters.status)
-    && [item.name, item.sku, item.category, item.location, brand?.name ?? '', brand?.description ?? '', warehouse?.name ?? ''].some((value) => value.toLowerCase().includes(query))
+    && [item.name, item.sku ?? '', item.location, brand?.name ?? '', brand?.description ?? '', warehouse?.name ?? ''].some((value) => value.toLowerCase().includes(query))
 }
 
 export function getBrandItems(catalog: InventoryCatalog, brandId: string, filters: InventoryFilters = {}) {

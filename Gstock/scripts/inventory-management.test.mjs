@@ -34,7 +34,7 @@ function addWarehouse(state, name = 'New Stock Owner') {
 function createStock() {
   const warehouse = addWarehouse(store.createInventoryState())
   const brand = store.applyInventoryAction(warehouse.state, actor, { type: 'add-brand', input: { warehouseId: warehouse.entityId, name: 'New Brand', description: 'New warehouse goods' } })
-  const item = store.applyInventoryAction(brand.state, actor, { type: 'add-item', input: { brandId: brand.entityId, sku: 'NEW-001', name: 'New stock item', category: 'Storage', location: 'D-01-01', quantity: 10, reorderLevel: 5, unit: 'units' } })
+  const item = store.applyInventoryAction(brand.state, actor, { type: 'add-item', input: { brandId: brand.entityId, sku: 'NEW-001', name: 'New stock item', location: 'D-01-01', quantity: 10, reorderLevel: 5, unit: 'units' } })
   assert.equal(warehouse.ok, true)
   assert.equal(brand.ok, true)
   assert.equal(item.ok, true)
@@ -67,13 +67,46 @@ test('warehouse names are unique and brand names and SKUs are unique within thei
 test('unknown owners, invalid item fields, and invalid quantities never create records', () => {
   const state = store.createInventoryState()
   assert.equal(store.applyInventoryAction(state, actor, { type: 'add-brand', input: { warehouseId: 'missing', name: 'Brand', description: '' } }).ok, false)
-  for (const patch of [{ brandId: 'missing' }, { sku: '' }, { location: ' ' }, { unit: 'invalid' }, { quantity: -1 }, { quantity: .5 }, { reorderLevel: NaN }]) {
+  for (const patch of [{ brandId: 'missing' }, { sku: 'x'.repeat(41) }, { location: ' ' }, { unit: 'invalid' }, { quantity: -1 }, { quantity: .5 }, { reorderLevel: NaN }]) {
     const result = store.applyInventoryAction(state, actor, { type: 'add-item', input: { ...state.catalog.items[0], sku: 'UNIQUE-SKU', ...patch } })
     assert.equal(result.ok, false)
   }
   assert.equal(store.applyInventoryAction(state, actor, { type: 'add-warehouse', input: { name: 'Example', contactEmail: 'invalid' } }).ok, false)
   assert.equal(store.applyInventoryAction(state, { ...actor, id: '' }, { type: 'add-warehouse', input: { name: 'Example' } }).ok, false)
   assert.equal(state.activity.length, 0)
+})
+
+test('items without SKUs can coexist, reload, be searched, and receive quantity updates', () => {
+  let state = store.createInventoryState()
+  const ids = []
+  for (const sku of [undefined, '', '   ']) {
+    const result = store.applyInventoryAction(state, actor, { type: 'add-item', input: { brandId: 'northline', name: 'Uncoded stock', ...(sku === undefined ? {} : { sku }), location: 'A-03', quantity: 10, unit: 'units', reorderLevel: 2 } })
+    assert.equal(result.ok, true)
+    state = result.state
+    ids.push(result.entityId)
+    assert.equal(Object.hasOwn(state.catalog.items.at(-1), 'sku'), false)
+  }
+  assert.equal(new Set(ids).size, 3)
+  let saved
+  store.persistInventoryState(state, { setItem(_key, value) { saved = value } })
+  globalThis.window = { localStorage: { getItem: () => saved } }
+  const loaded = store.loadInventoryState()
+  assert.deepEqual(loaded, state)
+  assert.equal(inventory.getBrandItems(loaded.catalog, 'northline', { query: 'Uncoded' }).length, 3)
+  const changed = store.applyInventoryAction(loaded, actor, { type: 'adjust-quantity', itemId: ids[0], mode: 'add', quantity: 5, expectedQuantity: 10, reason: 'Stock received' })
+  assert.equal(changed.ok, true)
+  assert.equal(changed.state.catalog.items.find((item) => item.id === ids[0]).quantity, 15)
+  assert.equal(changed.state.catalog.items.find((item) => item.id === ids[1]).quantity, 10)
+  const markup = renderToStaticMarkup(React.createElement(Inventory, { catalog: changed.state.catalog, selectedBrandId: 'northline' }))
+  assert.ok(markup.includes('Uncoded stock'))
+  assert.ok(!markup.includes('Category'))
+})
+
+test('existing saved category metadata remains compatible with the category-free catalog', () => {
+  const { state } = createStock()
+  state.catalog.items[0].category = 'Legacy packaging'
+  globalThis.window = { localStorage: { getItem: () => JSON.stringify(state) } }
+  assert.deepEqual(store.loadInventoryState(), state)
 })
 
 test('adding, removing, and setting stock updates the live counts and employee history', () => {

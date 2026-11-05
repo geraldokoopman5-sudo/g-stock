@@ -70,13 +70,13 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
 
       <dl className="inventory__overview" aria-label={brand ? 'Brand stock overview' : 'Warehouse stock overview'}>
         <div><dt>{brand ? 'Storage locations' : 'Brands'}</dt><dd>{brand ? new Set(allBrandItems.map((item) => item.location)).size : summary.brands}</dd></div>
-        <div><dt>Item lines</dt><dd>{summary.itemLines}<span>distinct SKUs</span></dd></div>
+        <div><dt>Item lines</dt><dd>{summary.itemLines}<span>stock items</span></dd></div>
         <div><dt>Need attention</dt><dd>{summary.needsAttention}<span>{summary.lowStock} low · {summary.outOfStock} out of stock</span></dd></div>
       </dl>
 
       <div className="inventory__section-heading"><h2>{brand ? 'Brand items' : 'Browse brands'}</h2><span>{brand ? 'Stock & storage' : `${catalog.warehouses.length} warehouses represented`}</span></div>
       <div className="inventory__filters">
-        <div className="inventory__search"><label htmlFor="inventory-search">{brand ? 'Search items' : 'Search inventory'}</label><input id="inventory-search" type="search" placeholder={brand ? 'Item, SKU, category, or location' : 'Brand, warehouse, item, or SKU'} value={query} onChange={(event) => setQuery(event.target.value)} /></div>
+        <div className="inventory__search"><label htmlFor="inventory-search">{brand ? 'Search items' : 'Search inventory'}</label><input id="inventory-search" type="search" placeholder={brand ? 'Item, SKU, or location' : 'Brand, warehouse, item, or SKU'} value={query} onChange={(event) => setQuery(event.target.value)} /></div>
         {!brand && <div><label htmlFor="inventory-warehouse">Warehouse</label><select id="inventory-warehouse" value={warehouseId} onChange={(event) => setWarehouseId(event.target.value)}><option value="all">All warehouses</option>{catalog.warehouses.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></div>}
         <div><label htmlFor="inventory-status">Stock status</label><select id="inventory-status" value={status} onChange={(event) => setStatus(event.target.value as StockFilter)}><option value="all">All stock</option><option value="in-stock">In stock</option><option value="low-stock">Low stock</option><option value="out-of-stock">Out of stock</option></select></div>
       </div>
@@ -87,10 +87,10 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
           <div className="inventory__table-wrap" role="region" aria-label={`${brand.name} inventory items`} tabIndex={0}>
             <table className="inventory__table">
               <caption className="inventory__sr-only">{brand.name} items, quantities, warehouse locations, and stock status</caption>
-              <thead><tr><th scope="col">Item / SKU</th><th scope="col">Category</th><th scope="col">Location</th><th scope="col">On hand</th><th scope="col">Reorder at</th><th scope="col">Status</th>{onAction && <th scope="col">Actions</th>}</tr></thead>
+              <thead><tr><th scope="col">Item</th><th scope="col">Location</th><th scope="col">On hand</th><th scope="col">Reorder at</th><th scope="col">Status</th>{onAction && <th scope="col">Actions</th>}</tr></thead>
               <tbody>{itemPages.items.map((item) => {
                 const itemStatus = getStockStatus(item)
-                return <tr key={item.id}><th scope="row"><span className="inventory__item-name">{item.name}</span><span className="inventory__sku">{item.sku}</span></th><td>{item.category}</td><td><span className="inventory__location">{item.location}</span></td><td className="inventory__quantity">{item.quantity.toLocaleString('en-ZA')}<span>{item.unit}</span></td><td>{item.reorderLevel}<span className="inventory__unit"> {item.unit}</span></td><td><span className={`inventory__stock inventory__stock--${itemStatus}`}><i aria-hidden="true" />{stockStatusLabels[itemStatus]}</span></td>{onAction && <td><button type="button" className="stock-button stock-button--small" aria-label={`Update quantity for ${item.name}`} onClick={() => setEditor({ mode: 'quantity', itemId: item.id })}>Update quantity</button></td>}</tr>
+                return <tr key={item.id}><th scope="row"><span className="inventory__item-name">{item.name}</span>{item.sku && <span className="inventory__sku">{item.sku}</span>}</th><td><span className="inventory__location">{item.location}</span></td><td className="inventory__quantity">{item.quantity.toLocaleString('en-ZA')}<span>{item.unit}</span></td><td>{item.reorderLevel}<span className="inventory__unit"> {item.unit}</span></td><td><span className={`inventory__stock inventory__stock--${itemStatus}`}><i aria-hidden="true" />{stockStatusLabels[itemStatus]}</span></td>{onAction && <td><button type="button" className="stock-button stock-button--small" aria-label={`Update quantity for ${item.name}`} onClick={() => setEditor({ mode: 'quantity', itemId: item.id })}>Update quantity</button></td>}</tr>
               })}</tbody>
             </table>
           </div>
