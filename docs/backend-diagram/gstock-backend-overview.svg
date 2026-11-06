@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1190" height="842" viewBox="0 0 1190 842" role="img" aria-labelledby="title desc"><title id="title">One application. Seven modules.</title><desc id="desc">Runtime architecture, module ownership and the rules that keep the monolith modular.</desc>
+<rect x="0" y="0" width="1190" height="842" rx="0" fill="#FFFFFF" stroke="none"/>
+<text x="36" y="29" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="600" fill="#536777">GSTOCK / BACKEND ARCHITECTURE</text>
+<text x="36" y="64" font-family="Segoe UI, Arial, sans-serif" font-size="27" font-weight="600" fill="#182B3A">One application. Seven modules.</text>
+<text x="36" y="88" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#536777">Runtime architecture, module ownership and the rules that keep the monolith modular.</text>
+<line x1="36" y1="106" x2="1154" y2="106" stroke="#D3DDE5" stroke-width="1"/>
+<line x1="36" y1="802" x2="1154" y2="802" stroke="#D3DDE5" stroke-width="1"/>
+<text x="36" y="822" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="400" fill="#536777">PROPOSED DESIGN  /  C# + ASP.NET Core  /  06 NOV 2026</text>
+<text x="1045" y="822" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="400" fill="#536777">01 / 08</text>
+<rect x="36" y="130" width="230" height="62" rx="7" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="53" y="154" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#182B3A">React staff workspace</text>
+<text x="53" y="176" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#536777">Same-origin /api/v1 requests</text>
+<line x1="266" y1="161" x2="326" y2="161" stroke="#536777" stroke-width="1"/>
+<line x1="326" y1="161" x2="319.60837741781387" y2="163.85432317141698" stroke="#536777"/>
+<line x1="326" y1="161" x2="319.60837741781387" y2="158.14567682858302" stroke="#536777"/>
+<rect x="326" y="130" width="828" height="62" rx="7" fill="#E9F5F2" stroke="#18756D"/>
+<text x="344" y="153" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" fill="#182B3A">ASP.NET Core HTTP pipeline</text>
+<text x="344" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="10.8" font-weight="400" fill="#182B3A">Errors + redaction  /  origin + CSRF + rate limits  /  JWT + current session + permissions</text>
+<line x1="738" y1="192" x2="738" y2="217" stroke="#536777" stroke-width="1"/>
+<line x1="738" y1="217" x2="735.145676828583" y2="210.60837741781384" stroke="#536777"/>
+<line x1="738" y1="217" x2="740.854323171417" y2="210.60837741781384" stroke="#536777"/>
+<rect x="36" y="217" width="1118" height="355" rx="9" fill="none" stroke="#2465A8"/>
+<text x="54" y="243" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#2465A8">ONE GSTOCK BACKEND PROCESS</text>
+<rect x="54" y="257" width="1082" height="47" rx="5" fill="#E8F1FA" stroke="none"/>
+<text x="70" y="277" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#182B3A">Application composition + workflow coordinators</text>
+<text x="70" y="294" font-family="Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#536777">One connection + transaction for catalogue, stock and employee-audit writes</text>
+<rect x="54" y="323" width="145" height="117" rx="6" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="64" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Authentication</text>
+<text x="64" y="363" font-family="Segoe UI, Arial, sans-serif" font-size="9.3" font-weight="400" fill="#536777">credentials / sessions / tokens</text>
+<text x="64" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="400" fill="#2465A8">Api / Application</text>
+<text x="64" y="421" font-family="Segoe UI, Arial, sans-serif" font-size="8.4" font-weight="400" fill="#2465A8">Domain / Infrastructure</text>
+<line x1="126" y1="304" x2="126" y2="323" stroke="#536777" stroke-width="1"/>
+<line x1="126" y1="323" x2="123.145676828583" y2="316.60837741781387" stroke="#536777"/>
+<line x1="126" y1="323" x2="128.85432317141698" y2="316.6083774178138" stroke="#536777"/>
+<rect x="209" y="323" width="145" height="117" rx="6" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="219" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Employees</text>
+<text x="219" y="363" font-family="Segoe UI, Arial, sans-serif" font-size="9.3" font-weight="400" fill="#536777">profiles / edit audit</text>
+<text x="219" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="400" fill="#2465A8">Api / Application</text>
+<text x="219" y="421" font-family="Segoe UI, Arial, sans-serif" font-size="8.4" font-weight="400" fill="#2465A8">Domain / Infrastructure</text>
+<line x1="281" y1="304" x2="281" y2="323" stroke="#536777" stroke-width="1"/>
+<line x1="281" y1="323" x2="278.145676828583" y2="316.60837741781387" stroke="#536777"/>
+<line x1="281" y1="323" x2="283.854323171417" y2="316.6083774178138" stroke="#536777"/>
+<rect x="364" y="323" width="145" height="117" rx="6" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="374" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Warehouses</text>
+<text x="374" y="363" font-family="Segoe UI, Arial, sans-serif" font-size="9.3" font-weight="400" fill="#536777">warehouse records</text>
+<text x="374" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="400" fill="#2465A8">Api / Application</text>
+<text x="374" y="421" font-family="Segoe UI, Arial, sans-serif" font-size="8.4" font-weight="400" fill="#2465A8">Domain / Infrastructure</text>
+<line x1="436" y1="304" x2="436" y2="323" stroke="#536777" stroke-width="1"/>
+<line x1="436" y1="323" x2="433.145676828583" y2="316.60837741781387" stroke="#536777"/>
+<line x1="436" y1="323" x2="438.854323171417" y2="316.6083774178138" stroke="#536777"/>
+<rect x="519" y="323" width="145" height="117" rx="6" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="529" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Brands</text>
+<text x="529" y="363" font-family="Segoe UI, Arial, sans-serif" font-size="9.3" font-weight="400" fill="#536777">warehouse-scoped brands</text>
+<text x="529" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="400" fill="#2465A8">Api / Application</text>
+<text x="529" y="421" font-family="Segoe UI, Arial, sans-serif" font-size="8.4" font-weight="400" fill="#2465A8">Domain / Infrastructure</text>
+<line x1="591" y1="304" x2="591" y2="323" stroke="#536777" stroke-width="1"/>
+<line x1="591" y1="323" x2="588.145676828583" y2="316.60837741781387" stroke="#536777"/>
+<line x1="591" y1="323" x2="593.854323171417" y2="316.6083774178138" stroke="#536777"/>
+<rect x="674" y="323" width="145" height="117" rx="6" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="684" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Inventory</text>
+<text x="684" y="363" font-family="Segoe UI, Arial, sans-serif" font-size="9.3" font-weight="400" fill="#536777">items / stock changes</text>
+<text x="684" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="400" fill="#2465A8">Api / Application</text>
+<text x="684" y="421" font-family="Segoe UI, Arial, sans-serif" font-size="8.4" font-weight="400" fill="#2465A8">Domain / Infrastructure</text>
+<line x1="746" y1="304" x2="746" y2="323" stroke="#536777" stroke-width="1"/>
+<line x1="746" y1="323" x2="743.145676828583" y2="316.60837741781387" stroke="#536777"/>
+<line x1="746" y1="323" x2="748.854323171417" y2="316.6083774178138" stroke="#536777"/>
+<rect x="829" y="323" width="145" height="117" rx="6" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="839" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Activity</text>
+<text x="839" y="363" font-family="Segoe UI, Arial, sans-serif" font-size="9.3" font-weight="400" fill="#536777">append-only history</text>
+<text x="839" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="400" fill="#2465A8">Api / Application</text>
+<text x="839" y="421" font-family="Segoe UI, Arial, sans-serif" font-size="8.4" font-weight="400" fill="#2465A8">Domain / Infrastructure</text>
+<line x1="901" y1="304" x2="901" y2="323" stroke="#536777" stroke-width="1"/>
+<line x1="901" y1="323" x2="898.145676828583" y2="316.60837741781387" stroke="#536777"/>
+<line x1="901" y1="323" x2="903.854323171417" y2="316.6083774178138" stroke="#536777"/>
+<rect x="984" y="323" width="145" height="117" rx="6" fill="#F5F8FB" stroke="#D3DDE5"/>
+<text x="994" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Reports</text>
+<text x="994" y="363" font-family="Segoe UI, Arial, sans-serif" font-size="9.3" font-weight="400" fill="#536777">read-only aggregation</text>
+<text x="994" y="402" font-family="Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="400" fill="#2465A8">Api / Application</text>
+<text x="994" y="421" font-family="Segoe UI, Arial, sans-serif" font-size="8.4" font-weight="400" fill="#2465A8">Domain / Infrastructure</text>
+<line x1="1056" y1="304" x2="1056" y2="323" stroke="#536777" stroke-width="1"/>
+<line x1="1056" y1="323" x2="1053.145676828583" y2="316.60837741781387" stroke="#536777"/>
+<line x1="1056" y1="323" x2="1058.854323171417" y2="316.6083774178138" stroke="#536777"/>
+<rect x="54" y="458" width="1082" height="42" rx="5" fill="#E9F5F2" stroke="none"/>
+<text x="70" y="476" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Gstock.Contracts assembly</text>
+<text x="70" y="492" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#536777">Public interfaces + snapshots + workflow contracts. In-process calls; private module implementations stay private.</text>
+<rect x="54" y="513" width="1082" height="41" rx="5" fill="#F5F8FB" stroke="none"/>
+<text x="70" y="531" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#182B3A">Shared infrastructure</text>
+<text x="70" y="546" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#536777">Transactions, request identity, IDs, clock, validation, errors and safe logging</text>
+<line x1="590" y1="572" x2="590" y2="596" stroke="#536777" stroke-width="1"/>
+<line x1="590" y1="596" x2="587.145676828583" y2="589.6083774178138" stroke="#536777"/>
+<line x1="590" y1="596" x2="592.854323171417" y2="589.6083774178138" stroke="#536777"/>
+<rect x="36" y="596" width="1118" height="82" rx="7" fill="#E8F1FA" stroke="#2465A8"/>
+<text x="54" y="621" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#2465A8">ONE POSTGRESQL DATABASE</text>
+<text x="54" y="643" font-family="Segoe UI, Arial, sans-serif" font-size="10.2" font-weight="400" fill="#182B3A">Authentication: employee_credentials, auth_sessions, refresh_tokens   |   Employees: employees, employee_edits, employee_edit_changes</text>
+<text x="54" y="662" font-family="Segoe UI, Arial, sans-serif" font-size="10.2" font-weight="400" fill="#182B3A">Warehouses: warehouses   |   Brands: brands   |   Inventory: inventory_items   |   Activity: inventory_activity   |   Reports: views only</text>
+<text x="36" y="711" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#182B3A">Boundary rules</text>
+<text x="36" y="733" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#182B3A">Only the owner module writes a table. Cross-module calls use contracts. Published SQL views allow approved read models; Reports uses a SELECT-only connection. Coordinators commit business writes and Activity together.</text>
+<text x="36" y="782" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#536777">Complete file map: pages 2-8  /  248 proposed files  /  folder and document symbols distinguish node types</text>
+</svg>
