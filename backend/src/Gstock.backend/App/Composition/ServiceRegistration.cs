@@ -1,5 +1,6 @@
 using Gstock.Contracts.Common;
 using Gstock.backend.Shared.Time;
+using Gstock.backend.Shared.Ids;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql.Replication;
 
@@ -11,6 +12,7 @@ public static class ServiceRegistration
     {
         services.AddHealthChecks();
         services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<IIdGenerator, UuidGenerator>();
 
         return services;
     }
