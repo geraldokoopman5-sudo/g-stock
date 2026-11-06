@@ -1,4 +1,5 @@
-// TODO: Add application-wide service registrations here.
+using Gstock.Contracts.Common;
+using Gstock.backend.Shared.Time;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql.Replication;
 
@@ -9,6 +10,7 @@ public static class ServiceRegistration
         this IServiceCollection services)
     {
         services.AddHealthChecks();
+        services.AddSingleton<IClock, SystemClock>();
 
         return services;
     }
