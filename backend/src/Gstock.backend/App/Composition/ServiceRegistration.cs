@@ -1,6 +1,7 @@
 using Gstock.Contracts.Common;
 using Gstock.backend.Shared.Time;
 using Gstock.backend.Shared.Ids;
+using Gstock.backend.Shared.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql.Replication;
 
@@ -13,7 +14,9 @@ public static class ServiceRegistration
         services.AddHealthChecks();
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IIdGenerator, UuidGenerator>();
-
+        services.AddHttpContextAccessor();
+        services.AddScoped<IRequestIdentity, CurrentRequestIdentity>();
+        
         return services;
     }
 }
