@@ -3,7 +3,7 @@ namespace Gstock.Contracts.Common;
 public sealed record PageResult<T>(
     IReadOnlyList<T> Items,
     int Page,
-    int PAgeSize,
+    int PageSize,
     long PageCount,
     long Total,
     long Start,

@@ -4,15 +4,22 @@ using Gstock.backend.App.Http;
 using Gstock.backend.App.Http.HealthEnpoints;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 // builder.Services.AddDbContext<>
-builder.Services.AddApplicationServices();
+builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddModules();
 
 var app = builder.Build();
+
+app.UseRouting();
+app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseExceptionHandler();
+app.UseStatusCodePages(ExceptionHandler.WriteEmptyResponseAsync);
+app.UseHttpsRedirection();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -24,7 +31,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
 app.MapEndpointHealth();
 
 app.Run();
