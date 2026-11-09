@@ -1,9 +1,17 @@
+using Gstock.backend.App.Administration;
 using Gstock.backend.App.Composition;
 using Gstock.backend.App.Composition.ModuleRegistration;
 using Gstock.backend.App.Http;
 using Gstock.backend.App.Http.HealthEnpoints;
 
-var builder = WebApplication.CreateBuilder(args);
+var isMigration = AdminCommandRunner.Handles(args);
+var builder = WebApplication.CreateBuilder(isMigration ? Array.Empty<string>() : args);
+
+if (isMigration)
+{
+    return await AdminCommandRunner.RunAsync(args, builder.Configuration);
+}
+
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
 
 // Add services to the container.
@@ -34,3 +42,4 @@ if (app.Environment.IsDevelopment())
 app.MapEndpointHealth();
 
 app.Run();
+return 0;
