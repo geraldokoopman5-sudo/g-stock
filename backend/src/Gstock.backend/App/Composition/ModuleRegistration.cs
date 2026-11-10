@@ -1,3 +1,5 @@
+using Gstock.backend.Modules.Authentication;
+using Gstock.backend.Modules.Employees;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Gstock.backend.App.Composition.ModuleRegistration;
@@ -8,7 +10,8 @@ public static class ModuleRegistration
         this IServiceCollection services
     )
     {
+        services.AddEmployeesModule();
+        services.AddAuthenticationModule();
         return services;
     }
 }
-//Will be used later for Auth, Employees and other modules

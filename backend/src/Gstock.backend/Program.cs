@@ -4,12 +4,12 @@ using Gstock.backend.App.Composition.ModuleRegistration;
 using Gstock.backend.App.Http;
 using Gstock.backend.App.Http.HealthEnpoints;
 
-var isMigration = AdminCommandRunner.Handles(args);
-var builder = WebApplication.CreateBuilder(isMigration ? Array.Empty<string>() : args);
+var isAdminCommand = AdminCommandRunner.Handles(args);
+var builder = WebApplication.CreateBuilder(isAdminCommand ? Array.Empty<string>() : args);
 
-if (isMigration)
+if (isAdminCommand)
 {
-    return await AdminCommandRunner.RunAsync(args, builder.Configuration);
+    return await AdminCommandRunner.RunAsync(args, builder);
 }
 
 builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
