@@ -31,3 +31,21 @@ dotnet test Gstock.sln
 ```
 
 The first build or test run restores the projects' packages. The SDK selection in `global.json` applies when running commands from within `backend/`; it pins the currently installed .NET 10 SDK patch family. From the repository root, the installed SDK is selected normally.
+
+## Run database migrations on Windows
+
+From the repository root, run:
+
+```powershell
+.\backend\migrate.cmd
+```
+
+Enter your existing PostgreSQL database name and the password for the `postgres` account. The helper uses `localhost:5432`, prompts for the password with masked input, builds the connection string, and runs the SQL migration command. It works with Windows PowerShell 5.1. It does not create the database; the account must have permission to create tables in it.
+
+For a different PostgreSQL account or server, pass the settings explicitly:
+
+```powershell
+.\backend\migrate.cmd -Database gstock -Username my_user -DatabaseHost localhost -Port 5432
+```
+
+The password is used for the migration process and is not saved to a configuration file. The wrapper allows this script to run for its own PowerShell process without changing your saved execution policy.

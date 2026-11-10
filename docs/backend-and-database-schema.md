@@ -148,12 +148,12 @@ A brand belongs to one warehouse. Reusing a brand name in a different warehouse 
 | email | varchar(254) | Required valid email; case-insensitive unique |
 | department | varchar(80) | Required free text |
 | role | varchar(80) | Required display job title |
-| can_manage_employee_accounts | boolean | Required; default false; internal permission |
-| is_active | boolean | Required; default true; internal account status |
+| account_permission | employee_account_permission enum | Required. Values are `none` and `manage_employee_accounts`. Default `none`. |
+| account_status | employee_account_status enum | Required. Values are `active` and `inactive`. Default `active`. |
 | created_at | timestamptz | Required; server-generated |
 | updated_at | timestamptz | Required; server-managed |
 
-Create unique indexes on lower(email) and lower(employee_id). Job title is not an authority source. Ordinary profile updates cannot set permissions or is_active; provision authorised managers and status changes through an administrative process. An inactive account cannot sign in, refresh, or use existing access tokens.
+Create unique indexes on `lower(email)` and `lower(employee_id)`. Require `account_permission = 'manage_employee_accounts'` for employee-management actions. Use the job title for display. Set `account_permission` and `account_status` through administrative workflows. Require `account_status = 'active'` for sign-in, refresh, and protected requests. Migration `002a_employee_account_enums.sql` converts the original employee flags to these enum values.
 
 ### 2 employee credentials
 

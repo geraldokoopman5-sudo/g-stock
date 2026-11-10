@@ -2,13 +2,13 @@
 
 C# / ASP.NET Core modular monolith, based on `../Gstock Backend and Database Schema.docx`. This is a design artifact, not an implemented backend. The C# / ASP.NET Core choice comes from the user's request. Exact class splits, infrastructure choices and file names are proposed implementation decisions.
 
-The [eight-page diagram](gstock-backend-diagram.pdf) shows the architecture and every proposed file. Open the [editable diagram](gstock-backend-diagram.drawio) in diagrams.net to edit individual shapes and labels. The [overview](gstock-backend-overview.svg) is a scalable image.
+The [eight-page diagram](gstock-backend-diagram.pdf) shows the original architecture and file layout. This file map also includes the employee account enum migration. Open the [editable diagram](gstock-backend-diagram.drawio) in diagrams.net to edit individual shapes and labels. The [overview](gstock-backend-overview.svg) is a scalable image.
 
 ## Legend and scope
 
 - `[D]` is a directory, also drawn with a blue folder symbol and a trailing slash.
 - `[F]` is a file, also drawn with a document symbol and its real extension.
-- The complete map contains **248 files** and **91 folders**, excluding the existing frontend and these diagram deliverables.
+- The complete map contains **249 files** and **91 folders**, excluding the existing frontend and these diagram deliverables.
 - Every listed path is explicit. DTO/contract files can contain multiple related C# records; no wildcard stands in for unlisted files.
 - Generated output (`bin/`, `obj/`, publish output, coverage results), local `.env` values and secret signing keys are deliberately excluded from the source tree. `global.json` pins the selected supported SDK at implementation time; this design does not assert a specific SDK/package version.
 - The application uses one ASP.NET Core host plus a small contracts assembly. Modules are folders inside the host project. Architecture tests enforce code boundaries; separate module assemblies are not required for this baseline.
@@ -55,6 +55,7 @@ Each module has four layers: `Api/` handles HTTP requests, request validation an
     |-- [D] migrations/
     |   |-- [F] 001_employees.sql
     |   |-- [F] 002_authentication.sql
+    |   |-- [F] 002a_employee_account_enums.sql
     |   |-- [F] 003_warehouses.sql
     |   |-- [F] 004_brands.sql
     |   |-- [F] 005_inventory_items.sql
@@ -518,6 +519,7 @@ Refresh replay has a separate failure rule: revocation of a reused token family 
 | --- | --- |
 | 001_employees.sql | Employees: employees, case-insensitive email and employee-number uniqueness |
 | 002_authentication.sql | Authentication: employee_credentials, auth_sessions, refresh_tokens; family/rotation constraints, deferred self-FK and one-current-token index |
+| 002a_employee_account_enums.sql | Employees: convert the permission and status flags to PostgreSQL enums, preserving existing values and defaults |
 | 003_warehouses.sql | Warehouses: warehouses and normalized-name uniqueness |
 | 004_brands.sql | Brands: brands, warehouse FK, scoped name uniqueness and composite key |
 | 005_inventory_items.sql | Inventory: inventory_items, scoped brand FK, nullable scoped SKU uniqueness, units and quantity bounds |
