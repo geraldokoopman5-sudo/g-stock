@@ -4,7 +4,6 @@ import EmployeeCard from './EmployeeCard'
 import EmployeeAccounts from './EmployeeAccounts'
 import Inventory from './Inventory'
 import Warehouses from './Warehouses'
-import Reports from './Reports'
 import ThemeToggle from './ThemeToggle'
 import type { InventoryState, SaveInventoryAction } from '../types/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
@@ -16,7 +15,6 @@ const pages = [
   { id: 'inventory', label: 'Inventory', description: 'Stock, products, and quantities', icon: 'inventory' },
   { id: 'warehouses', label: 'Warehouses', description: 'Warehouse locations, brands, and stock', icon: 'warehouses' },
   { id: 'employees', label: 'Employee accounts', description: 'Your people and departments', icon: 'employees' },
-  { id: 'reports', label: 'Reports', description: 'Insights into your operations', icon: 'reports' },
 ] as const satisfies ReadonlyArray<{ id: string; label: string; description: string; icon: WorkspaceIconName }>
 
 function subscribeToPage(onChange: () => void) {
@@ -103,10 +101,8 @@ export default function Workspace({ employee, accounts, onSaveEmployee, inventor
           <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} />
         ) : pageId === 'inventory' ? (
           <Inventory selectedBrandId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
-        ) : pageId === 'warehouses' ? (
-          <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
         ) : (
-          <Reports catalog={inventory.catalog} activity={inventory.activity} />
+          <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
         )}
       </main>
       <footer className="workspace__footer"><span>G-Stock · Staff workspace</span><span>Everything in its place.</span></footer>
