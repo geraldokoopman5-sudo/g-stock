@@ -8,5 +8,5 @@ public class Brands
     public required string Description{get; init;}
     public required DateTime DateAdded{get; init;}
     public required byte[]? BrandPhoto{get; init;}
-    public required DateTime ArchivedAt {get; init;}
+    public required DateTime ArchivedAt {get; set;}
 }
