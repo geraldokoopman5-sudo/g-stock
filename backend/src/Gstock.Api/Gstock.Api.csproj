@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\Gstock.Contracts\Gstock.Contracts.csproj" />
@@ -14,5 +14,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>23381db9-edea-4f84-a294-637eb63b4596</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../../migrations/001_initial.sql"
+                      LogicalName="Gstock.Migrations.001_initial.sql" />
+  </ItemGroup>
 
 </Project>

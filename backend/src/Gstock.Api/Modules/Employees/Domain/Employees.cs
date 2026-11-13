@@ -1,5 +1,3 @@
-using Gstock.Api.Modules.Employees.Domain;
-using Gstock.Api.Modules.Employees.Domain;
 namespace Gstock.Api.Modules.Employees.Domain;
 
 public class Employees
