@@ -1,3 +1,5 @@
+using Gstock.Api.Modules.Activity.Application;
+using Gstock.Api.Modules.Activity.Infrastructure;
 using Gstock.Api.Modules.Warehouses.Application;
 using Gstock.Api.Modules.Warehouses.Infrastructure;
 using Gstock.Api.Shared.Database;
@@ -6,6 +8,7 @@ using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPostgresDataSource();
 builder.Services.AddScoped<IWarehouseRepository, PostgresWarehouseRepository>();
+builder.Services.AddScoped<IInventoryActivityRepository, PostgresInventoryActivityRepository>();
 
 var app = builder.Build();
 

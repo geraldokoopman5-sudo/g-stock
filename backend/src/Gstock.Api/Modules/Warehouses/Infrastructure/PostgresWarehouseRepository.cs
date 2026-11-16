@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Gstock.Api.Modules.Warehouses.Application;
 using Gstock.Api.Modules.Warehouses.Domain;
 using Npgsql;
@@ -35,5 +36,34 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
         }
 
         return warehouses;
+    }
+
+    public async Task AddAsync(
+        Warehouse warehouse,
+        DbTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        if (transaction is not NpgsqlTransaction { Connection: { } connection } postgresTransaction)
+        {
+            throw new InvalidOperationException("An active PostgreSQL transaction is required.");
+        }
+
+        const string sql = """
+            INSERT INTO public.warehouses (
+                id, name, street_name, suburb_name, city, province, postal_code
+            )
+            VALUES (@id, @name, @street_name, @suburb_name, @city, @province, @postal_code);
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection, postgresTransaction);
+        command.Parameters.AddWithValue("id", warehouse.Id);
+        command.Parameters.AddWithValue("name", warehouse.Name);
+        command.Parameters.AddWithValue("street_name", warehouse.StreetName);
+        command.Parameters.AddWithValue("suburb_name", warehouse.SuburbName);
+        command.Parameters.AddWithValue("city", warehouse.City);
+        command.Parameters.AddWithValue("province", warehouse.Province);
+        command.Parameters.AddWithValue("postal_code", warehouse.PostalCode);
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }
