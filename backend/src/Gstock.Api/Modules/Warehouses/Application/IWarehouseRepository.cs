@@ -7,6 +7,8 @@ internal interface IWarehouseRepository
 {
     Task<IReadOnlyList<Warehouse>> ListAsync(CancellationToken cancellationToken);
 
+    Task<Warehouse?> FindAsync(Guid id, CancellationToken cancellationToken);
+
     Task AddAsync(
         Warehouse warehouse,
         DbTransaction transaction,

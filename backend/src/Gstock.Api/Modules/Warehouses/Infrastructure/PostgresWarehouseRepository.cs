@@ -23,20 +23,34 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            warehouses.Add(new Warehouse
-            {
-                Id = reader.GetGuid(0),
-                Name = reader.GetString(1),
-                StreetName = reader.GetString(2),
-                SuburbName = reader.GetString(3),
-                City = reader.GetString(4),
-                Province = reader.GetString(5),
-                PostalCode = reader.GetInt32(6)
-            });
+            warehouses.Add(ReadWarehouse(reader));
         }
 
         return warehouses;
     }
+
+    public async Task<Warehouse?> FindAsync(Guid id, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT id, name, street_name, suburb_name, city, province, postal_code
+            FROM public.warehouses WHERE id = @id;
+            """;
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("id", id);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? ReadWarehouse(reader) : null;
+    }
+
+    private static Warehouse ReadWarehouse(NpgsqlDataReader reader) => new()
+    {
+        Id = reader.GetGuid(0),
+        Name = reader.GetString(1),
+        StreetName = reader.GetString(2),
+        SuburbName = reader.GetString(3),
+        City = reader.GetString(4),
+        Province = reader.GetString(5),
+        PostalCode = reader.GetInt32(6)
+    };
 
     public async Task AddAsync(
         Warehouse warehouse,

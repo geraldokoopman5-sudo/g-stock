@@ -33,13 +33,7 @@ internal sealed class PostgresEmployeeDirectory : IEmployeeDirectory
         }
 
         var status = reader.GetBoolean(3) ? AccountStatus.Active : AccountStatus.InActive;
-        var role = reader.GetString(4) switch
-        {
-            "Nemployee" => AccountRoles.Nemployee,
-            "Stock Manager" => AccountRoles.StockManager,
-            "Staff Manager" => AccountRoles.StaffManager,
-            _ => throw new InvalidOperationException("The database returned an unknown account role.")
-        };
+        var role = EmployeeRoleMapping.Read(reader.GetString(4));
 
         return new EmployeeActor(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), status, role);
     }
