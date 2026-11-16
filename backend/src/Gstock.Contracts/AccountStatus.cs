@@ -1,4 +1,4 @@
-namespace Gstock.Api.Modules.Employees.Domain;
+namespace Gstock.Contracts;
 
 public enum AccountStatus
 {

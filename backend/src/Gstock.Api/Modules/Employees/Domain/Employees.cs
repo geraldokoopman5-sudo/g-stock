@@ -1,3 +1,5 @@
+using Gstock.Contracts;
+
 namespace Gstock.Api.Modules.Employees.Domain;
 
 public class Employees
