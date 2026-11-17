@@ -23,13 +23,17 @@ internal static class ApiRequests
     private static bool TryEmployeeId(this ClaimsPrincipal user, out Guid employeeId) =>
         Guid.TryParse(user.FindFirstValue("sub"), out employeeId) && employeeId != Guid.Empty;
 
-    public static string RequiredText(string? value, string field, int maxLength) =>
+    public static string RequiredText(string? value, string field, int maxLength = int.MaxValue) =>
         !string.IsNullOrWhiteSpace(value) ? Text(value, field, maxLength) : throw ApiError.Invalid(field, "This field is required.");
 
     public static string Text(string value, string field, int maxLength)
     {
         var trimmed = value.Trim();
-        if (trimmed.Contains('\0') || trimmed.EnumerateRunes().Count() > maxLength)
+        if (trimmed.Contains('\0'))
+        {
+            throw ApiError.Invalid(field, "Enter valid text.");
+        }
+        if (trimmed.EnumerateRunes().Count() > maxLength)
         {
             throw ApiError.Invalid(field, $"Enter valid text of at most {maxLength} characters.");
         }
@@ -56,11 +60,14 @@ internal static class ApiRequests
             }
             catch (PostgresException error) when (
                 !context.Response.HasStarted && error.SqlState == PostgresErrorCodes.UniqueViolation &&
-                error.ConstraintName is "brands_warehouse_name_uq" or "inventory_items_sku_uq" or
+                error.ConstraintName is "warehouses_name_uq" or "warehouses_address_uq" or
+                    "brands_warehouse_name_uq" or "inventory_items_sku_uq" or
                     "employees_email_uq" or "employees_employee_id_uq")
             {
                 string message = error.ConstraintName switch
                 {
+                    "warehouses_name_uq" => "A warehouse with this name already exists.",
+                    "warehouses_address_uq" => "A warehouse with this address already exists.",
                     "brands_warehouse_name_uq" => "This warehouse already has a brand with that name.",
                     "inventory_items_sku_uq" => "An item with this SKU already exists.",
                     "employees_email_uq" => "An employee with this email already exists.",

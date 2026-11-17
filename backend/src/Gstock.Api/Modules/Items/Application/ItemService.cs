@@ -50,7 +50,7 @@ internal sealed class ItemService(
     {
         var amount = Quantity(input.Quantity, "quantity");
         var expected = Quantity(input.ExpectedQuantity, "expectedQuantity");
-        ApiRequests.RequiredText(input.Reason, "reason", 500);
+        var reason = ApiRequests.RequiredText(input.Reason, "reason", 500);
         var mode = input.Mode?.Trim().ToLowerInvariant();
         if (mode is not ("add" or "remove" or "set"))
         {
@@ -79,7 +79,7 @@ internal sealed class ItemService(
 
             await items.SetQuantityAsync(id, updated, transaction, ct);
             var adjusted = item with { Quantity = updated };
-            await activity.AddAsync(Event("quantity-updated", adjusted, actor, item.Quantity), transaction, ct);
+            await activity.AddAsync(Event("quantity-updated", adjusted, actor, item.Quantity, reason), transaction, ct);
             return adjusted;
         }, token);
     }
@@ -107,6 +107,7 @@ internal sealed class ItemService(
     private static int Quantity(int? value, string field) =>
         value is >= 0 and <= MaxQuantity ? value.Value : throw ApiError.Invalid(field, "Enter a quantity from 0 to 1,000,000,000.");
 
-    private static InventoryEvent Event(string type, InventoryItems item, EmployeeActor actor, int? previous = null) =>
-        new(type, item.WarehouseId, item.BrandId, item.Id, item.Name, actor, previous, item.Quantity, item.Unit);
+    private static InventoryEvent Event(
+        string type, InventoryItems item, EmployeeActor actor, int? previous = null, string? reason = null) =>
+        new(type, item.WarehouseId, item.BrandId, item.Id, item.Name, actor, previous, item.Quantity, item.Unit, reason);
 }

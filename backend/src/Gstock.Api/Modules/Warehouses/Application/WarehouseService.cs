@@ -1,6 +1,6 @@
-using System.Text;
 using Gstock.Api.Modules.Activity.Application;
 using Gstock.Api.Modules.Warehouses.Domain;
+using Gstock.Api.Shared.Api;
 using Gstock.Api.Shared.Database;
 using Gstock.Contracts;
 
@@ -28,28 +28,21 @@ internal sealed class WarehouseService(
         var warehouse = new Warehouse
         {
             Id = Guid.NewGuid(),
-            Name = RequiredText(input.Name, nameof(input.Name)),
-            StreetName = RequiredText(input.StreetName, nameof(input.StreetName)),
-            SuburbName = RequiredText(input.SuburbName, nameof(input.SuburbName)),
-            City = RequiredText(input.City, nameof(input.City)),
-            Province = RequiredText(input.Province, nameof(input.Province)),
+            Name = ApiRequests.RequiredText(input.Name, "name", 100),
+            StreetName = ApiRequests.RequiredText(input.StreetName, "streetName"),
+            SuburbName = ApiRequests.RequiredText(input.SuburbName, "suburbName"),
+            City = ApiRequests.RequiredText(input.City, "city"),
+            Province = ApiRequests.RequiredText(input.Province, "province"),
             PostalCode = input.PostalCode
-                ?? throw new ArgumentException("Postal code is required.", nameof(input.PostalCode))
+                ?? throw ApiError.Invalid("postalCode", "Postal code is required.")
         };
-
-        if (warehouse.Name.EnumerateRunes().Count() > 100)
-        {
-            throw new ArgumentException(
-                "Warehouse name can have at most 100 characters.", nameof(input.Name));
-        }
 
         return database.RunAsync(async (transaction, token) =>
         {
             var actor = await employees.FindForWriteAsync(actorId, transaction, token);
-            if (actor is not { Status: AccountStatus.Active, Role: AccountRoles.StockManager })
+            if (actor is not { Status: AccountStatus.Active })
             {
-                throw new UnauthorizedAccessException(
-                    "Only an active Stock Manager can create a warehouse.");
+                throw ApiError.Forbidden();
             }
 
             await warehouses.AddAsync(warehouse, transaction, token);
@@ -61,15 +54,5 @@ internal sealed class WarehouseService(
 
             return warehouse;
         }, cancellationToken);
-    }
-
-    private static string RequiredText(string? value, string field)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("This field is required.", field);
-        }
-
-        return value.Trim();
     }
 }

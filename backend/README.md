@@ -1,0 +1,48 @@
+# G-Stock backend
+
+Run these commands from the folder containing `Gstock.sln`. Local development uses the .NET 10 SDK, PostgreSQL, and PowerShell 7.2 or newer for the scripts.
+
+## Configure and migrate PostgreSQL
+
+Create an empty database named `gstock_dev` if it does not exist. Put your local connection string in `backend/src/Gstock.Api/appsettings.Local.json`. This file is ignored by Git and is read in Development when no other `ConnectionStrings:DefaultConnection` is configured.
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=gstock_dev;Username=postgres;Password=YOUR_LOCAL_PASSWORD"
+  }
+}
+```
+
+```powershell
+dotnet run --project .\backend\src\Gstock.Api --launch-profile http -- --check-db
+dotnet run --project .\backend\src\Gstock.Api --launch-profile http -- --migrate
+```
+
+The migration command applies pending SQL files from `backend/migrations` in filename order. It records each applied file in `public.schema_migrations`.
+
+## Create development accounts
+
+Run the corresponding line once for each manager account you still need. These commands also apply pending migrations and set up development token signing if needed. Choose a G-Stock email and password at each prompt.
+
+```powershell
+pwsh -NoProfile -File .\backend\scripts\Initialize-DevelopmentAuth.ps1
+pwsh -NoProfile -File .\backend\scripts\Initialize-DevelopmentAuth.ps1 -StaffManager
+```
+
+## Run the backend smoke test
+
+Create a development certificate if you need one. Then start the API and leave it running.
+
+```powershell
+dotnet dev-certs https
+dotnet run --project .\backend\src\Gstock.Api --launch-profile https
+```
+
+In a second terminal, run the smoke test and enter both manager accounts when prompted.
+
+```powershell
+pwsh -NoProfile -File .\backend\scripts\Test-DevelopmentBackend.ps1
+```
+
+The test checks the permissions for all three account roles, warehouse and catalogue operations, stock validation and activity, account edits, refresh, and logout. It uses the local HTTPS endpoint so the refresh cookie can be sent. It leaves sample warehouses and activity in the development database, archives the sample catalogue entries, and deactivates its sample employee.

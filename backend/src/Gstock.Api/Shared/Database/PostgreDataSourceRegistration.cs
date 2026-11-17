@@ -10,6 +10,15 @@ internal static class PostgresDataSourceRegistration
         {
             var configuration = provider.GetRequiredService<IConfiguration>();
             var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var environment = provider.GetRequiredService<IHostEnvironment>();
+
+            if (string.IsNullOrWhiteSpace(connectionString) && environment.IsDevelopment())
+            {
+                using var local = new ConfigurationManager();
+                local.SetFileProvider(environment.ContentRootFileProvider);
+                local.AddJsonFile("appsettings.Local.json", optional: true);
+                connectionString = local.GetConnectionString("DefaultConnection");
+            }
 
             if (string.IsNullOrWhiteSpace(connectionString))
             {

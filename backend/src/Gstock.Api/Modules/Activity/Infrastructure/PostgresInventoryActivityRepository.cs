@@ -10,31 +10,31 @@ internal sealed class PostgresInventoryActivityRepository(NpgsqlDataSource sourc
 {
     public Task AddWarehouseCreatedAsync(WarehouseCreatedActivity activity, DbTransaction transaction, CancellationToken token) =>
         InsertAsync(activity.Id, "warehouse-created", activity.WarehouseId, null, null, activity.WarehouseName,
-            activity.ActorId, activity.ActorEmployeeId, activity.ActorFullName, null, null, null, transaction, token);
+            activity.ActorId, activity.ActorEmployeeId, activity.ActorFullName, null, null, null, null, transaction, token);
 
     public Task AddAsync(InventoryEvent activity, DbTransaction transaction, CancellationToken token) =>
         InsertAsync(Guid.NewGuid(), activity.Type, activity.WarehouseId, activity.BrandId, activity.ItemId, activity.Name,
             activity.Actor.Id, activity.Actor.EmployeeNumber, activity.Actor.FullName,
-            activity.PreviousQuantity, activity.Quantity, activity.Unit, transaction, token);
+            activity.PreviousQuantity, activity.Quantity, activity.Unit, activity.Reason, transaction, token);
 
     private static async Task InsertAsync(
         Guid id, string type, Guid warehouseId, Guid? brandId, Guid? itemId, string name, Guid actorId,
-        string employeeId, string fullName, int? previous, int? quantity, string? unit,
+        string employeeId, string fullName, int? previous, int? quantity, string? unit, string? reason,
         DbTransaction transaction, CancellationToken token)
     {
         const string sql = """
             INSERT INTO public.inventory_activity
                 (id, type, warehouse_id, brand_id, item_id, entity_name, actor_id,
-                 actor_employee_id, actor_full_name, previous_quantity, quantity, unit)
+                 actor_employee_id, actor_full_name, previous_quantity, quantity, unit, reason)
             VALUES (@id, @type, @warehouse, @brand, @item, @name, @actor,
-                    @employee, @full_name, @previous, @quantity, @unit);
+                    @employee, @full_name, @previous, @quantity, @unit, @reason);
             """;
         await using var command = PostgresCommand.InTransaction(transaction, sql)
             .Bind("id", id).Bind("type", type).Bind("warehouse", warehouseId)
             .Bind("name", name).Bind("actor", actorId).Bind("employee", employeeId).Bind("full_name", fullName)
             .BindNullable("brand", NpgsqlDbType.Uuid, brandId).BindNullable("item", NpgsqlDbType.Uuid, itemId)
             .BindNullable("previous", NpgsqlDbType.Integer, previous).BindNullable("quantity", NpgsqlDbType.Integer, quantity)
-            .BindNullable("unit", NpgsqlDbType.Text, unit);
+            .BindNullable("unit", NpgsqlDbType.Text, unit).BindNullable("reason", NpgsqlDbType.Text, reason);
         await command.ExecuteNonQueryAsync(token);
     }
 
@@ -42,7 +42,7 @@ internal sealed class PostgresInventoryActivityRepository(NpgsqlDataSource sourc
     {
         const string sql = """
             SELECT id, type, warehouse_id, brand_id, item_id, entity_name, actor_id, actor_employee_id,
-                   actor_full_name, occurred_at, previous_quantity, quantity, unit
+                   actor_full_name, occurred_at, previous_quantity, quantity, unit, reason
             FROM public.inventory_activity
             WHERE (@warehouse IS NULL OR warehouse_id = @warehouse)
               AND (@brand IS NULL OR brand_id = @brand)
@@ -69,7 +69,7 @@ internal sealed class PostgresInventoryActivityRepository(NpgsqlDataSource sourc
                 reader.NullableValue<Guid>(4), reader.GetString(5),
                 new ActivityActor(reader.GetGuid(6), reader.GetString(7), reader.GetString(8)),
                 reader.GetDateTime(9), reader.NullableValue<int>(10), reader.NullableValue<int>(11),
-                reader.NullableText(12)));
+                reader.NullableText(12), reader.NullableText(13)));
         }
 
         return entries;

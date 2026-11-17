@@ -18,8 +18,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="../../migrations/001_initial.sql"
-                      LogicalName="Gstock.Migrations.001_initial.sql" />
+    <EmbeddedResource Include="../../migrations/*.sql"
+                      LogicalName="Gstock.Migrations.%(Filename)%(Extension)" />
+    <Content Update="appsettings.Local.json"
+             CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
 </Project>

@@ -8,12 +8,12 @@ internal sealed record WarehouseCreatedActivity(
 
 internal sealed record InventoryEvent(
     string Type, Guid WarehouseId, Guid BrandId, Guid? ItemId, string Name, EmployeeActor Actor,
-    int? PreviousQuantity = null, int? Quantity = null, string? Unit = null);
+    int? PreviousQuantity = null, int? Quantity = null, string? Unit = null, string? Reason = null);
 
 internal sealed record ActivityActor(Guid Id, string EmployeeId, string FullName);
 internal sealed record ActivityEntry(
     Guid Id, string Type, Guid WarehouseId, Guid? BrandId, Guid? ItemId, string EntityName,
-    ActivityActor Actor, DateTime OccurredAt, int? PreviousQuantity, int? Quantity, string? Unit);
+    ActivityActor Actor, DateTime OccurredAt, int? PreviousQuantity, int? Quantity, string? Unit, string? Reason);
 
 internal sealed record ActivityFilter(
     Guid? WarehouseId, Guid? BrandId, Guid? ItemId, string? Type,
