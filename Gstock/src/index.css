@@ -1,0 +1,45 @@
+:root {
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  color: var(--color-text);
+  background: var(--color-background);
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --color-background: var(--color-off-white);
+  --color-surface: var(--color-off-white);
+  --color-surface-rgb: var(--color-off-white-rgb);
+  --color-surface-muted: color-mix(in srgb, var(--color-off-white) 92%, var(--color-warm-grey));
+  --color-border: color-mix(in srgb, var(--color-warm-grey) 75%, var(--color-mist-blue));
+  --color-accent: var(--color-nordic-blue);
+  --color-text: var(--color-ink);
+  --color-text-secondary: var(--color-muted-ink);
+  --color-accent-text: var(--color-strong-blue);
+  --color-button-background: color-mix(in srgb, var(--color-nordic-blue) 92%, var(--color-ink));
+  --color-button-hover: var(--color-strong-blue);
+  --color-on-accent: var(--color-off-white);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-background: var(--color-ink);
+  --color-surface: var(--color-strong-blue);
+  --color-surface-rgb: var(--color-strong-blue-rgb);
+  --color-surface-muted: color-mix(in srgb, var(--color-strong-blue) 90%, var(--color-off-white));
+  --color-border: color-mix(in srgb, var(--color-strong-blue) 75%, var(--color-mist-blue));
+  --color-text: var(--color-off-white);
+  --color-text-secondary: color-mix(in srgb, var(--color-mist-blue) 75%, var(--color-strong-blue));
+  --color-accent-text: var(--color-mist-blue);
+  --color-button-background: var(--color-strong-blue);
+  --color-button-hover: color-mix(in srgb, var(--color-strong-blue) 85%, var(--color-mist-blue));
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--color-nordic-blue); outline-offset: 4px; }
+button, input { min-height: 44px; }
+p, h1, h2 { margin: 0; }
+
+::selection { background: var(--color-mist-blue); color: var(--color-ink); }
