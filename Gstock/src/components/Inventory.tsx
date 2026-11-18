@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { InventoryActivity as Activity, InventoryCatalog, SaveInventoryAction, StockFilter } from '../types/inventory'
 import { getBrandGroups, getBrandItems, getInventorySummary, getStockStatus, sampleInventory, stockStatusLabels } from '../data/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
+import type { WorkspacePermissions } from '../api/workspace'
 import InventoryEditor from './InventoryEditor'
 import type { InventoryEditorSelection } from './InventoryEditor'
 import InventoryActivity from './InventoryActivity'
@@ -10,13 +11,14 @@ import { usePagination } from '../hooks/usePagination'
 import './Inventory.css'
 
 interface InventoryProps {
+  permissions?: WorkspacePermissions
   selectedBrandId?: string
   catalog?: InventoryCatalog
   activity?: readonly Activity[]
   onAction?: SaveInventoryAction
 }
 
-export default function Inventory({ selectedBrandId, catalog = sampleInventory, activity = [], onAction }: InventoryProps) {
+export default function Inventory({ selectedBrandId, catalog = sampleInventory, activity = [], onAction, permissions }: InventoryProps) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<StockFilter>('all')
   const [warehouseId, setWarehouseId] = useState('all')
@@ -59,11 +61,11 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
           <h1 id="inventory-heading" ref={heading} tabIndex={-1}>{brand?.name ?? 'Inventory'}</h1>
           <p className="inventory__intro">{brand ? <><span>{onAction && warehouse ? <a href={`#warehouses/${encodeURIComponent(warehouse.id)}`}>{warehouse.name}</a> : warehouse?.name}</span>{brand.description}</> : 'Stock across your warehouses, organised by brand.'}</p>
         </div>
-        <span className="inventory__sample"><span aria-hidden="true" />{onAction ? 'Saved in this browser' : 'Sample inventory'}</span>
+        <span className="inventory__sample"><span aria-hidden="true" />{onAction ? 'Live inventory' : 'Sample inventory'}</span>
       </div>
       {onAction && <div className="stock-actions inventory__actions">
-        {!brand && <><button className="stock-button" type="button" onClick={() => setEditor({ mode: 'warehouse' })}>Add warehouse</button><button className="stock-button" type="button" disabled={!catalog.warehouses.length} onClick={() => setEditor({ mode: 'brand', warehouseId: warehouseId === 'all' ? undefined : warehouseId })}>Add brand</button></>}
-        <button className="stock-button stock-button--primary" type="button" disabled={!catalog.warehouses.length} onClick={() => setEditor({ mode: 'item', brandId: brand?.id, warehouseId: brand?.warehouseId ?? (warehouseId === 'all' ? undefined : warehouseId) })}>Add stock</button>
+        {!brand && <><button className="stock-button" type="button" disabled={permissions?.canCreateWarehouse === false} onClick={() => setEditor({ mode: 'warehouse' })}>Add warehouse</button><button className="stock-button" type="button" disabled={!catalog.warehouses.length || permissions?.canManageBrands === false} onClick={() => setEditor({ mode: 'brand', warehouseId: warehouseId === 'all' ? undefined : warehouseId })}>Add brand</button></>}
+        <button className="stock-button stock-button--primary" type="button" disabled={!catalog.brands.length || permissions?.canManageItems === false} onClick={() => setEditor({ mode: 'item', brandId: brand?.id, warehouseId: brand?.warehouseId ?? (warehouseId === 'all' ? undefined : warehouseId) })}>Add stock</button>
         {!brand && <a className="stock-button" href="#warehouses">View warehouses</a>}
       </div>}
       {feedback && <p className="stock-feedback" role="status">{feedback}</p>}
@@ -90,7 +92,7 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
               <thead><tr><th scope="col">Item</th><th scope="col">Location</th><th scope="col">On hand</th><th scope="col">Reorder at</th><th scope="col">Status</th>{onAction && <th scope="col">Actions</th>}</tr></thead>
               <tbody>{itemPages.items.map((item) => {
                 const itemStatus = getStockStatus(item)
-                return <tr key={item.id}><th scope="row"><span className="inventory__item-name">{item.name}</span>{item.sku && <span className="inventory__sku">{item.sku}</span>}</th><td><span className="inventory__location">{item.location}</span></td><td className="inventory__quantity">{item.quantity.toLocaleString('en-ZA')}<span>{item.unit}</span></td><td>{item.reorderLevel}<span className="inventory__unit"> {item.unit}</span></td><td><span className={`inventory__stock inventory__stock--${itemStatus}`}><i aria-hidden="true" />{stockStatusLabels[itemStatus]}</span></td>{onAction && <td><button type="button" className="stock-button stock-button--small" aria-label={`Update quantity for ${item.name}`} onClick={() => setEditor({ mode: 'quantity', itemId: item.id })}>Update quantity</button></td>}</tr>
+                return <tr key={item.id}><th scope="row"><span className="inventory__item-name">{item.name}</span>{item.sku && <span className="inventory__sku">{item.sku}</span>}</th><td><span className="inventory__location">{item.location}</span></td><td className="inventory__quantity">{item.quantity.toLocaleString('en-ZA')}<span>{item.unit}</span></td><td>{item.reorderLevel}<span className="inventory__unit"> {item.unit}</span></td><td><span className={`inventory__stock inventory__stock--${itemStatus}`}><i aria-hidden="true" />{stockStatusLabels[itemStatus]}</span></td>{onAction && <td><button type="button" className="stock-button stock-button--small" disabled={permissions?.canManageItems === false} aria-label={`Update quantity for ${item.name}`} onClick={() => setEditor({ mode: 'quantity', itemId: item.id })}>Update quantity</button></td>}</tr>
               })}</tbody>
             </table>
           </div>
@@ -108,7 +110,7 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
       )}
       {brand ? <ListPagination {...itemPages} label="items" href={`#inventory/${encodeURIComponent(brand.id)}`} /> : <ListPagination {...brandPages} label="brands" href="#inventory" />}
       <InventoryActivity events={brand ? activity.filter((event) => event.brandId === brand.id) : activity} />
-      {editor && onAction && <InventoryEditor key={`${editor.mode}/${editor.warehouseId ?? ''}/${editor.itemId ?? ''}`} selection={editor} catalog={catalog} onSave={onAction} onClose={() => { setEditor(null); heading.current?.focus() }} onAddBrand={(id) => setEditor({ mode: 'brand', warehouseId: id })} onComplete={(id, action) => {
+      {editor && onAction && <InventoryEditor key={`${editor.mode}/${editor.warehouseId ?? ''}/${editor.itemId ?? ''}`} selection={editor} catalog={catalog} onSave={onAction} onClose={() => { setEditor(null); heading.current?.focus() }} onAddBrand={permissions?.canManageBrands === false ? undefined : (id) => setEditor({ mode: 'brand', warehouseId: id })} onComplete={(id, action) => {
         setEditor(null); setFeedback(action.type === 'adjust-quantity' ? 'Stock quantity updated. The employee and reason are recorded in warehouse activity.' : 'Warehouse details saved.'); heading.current?.focus()
         if (action.type !== 'adjust-quantity') clearFilters()
         if (action.type === 'add-warehouse') window.location.hash = `warehouses/${encodeURIComponent(id)}`

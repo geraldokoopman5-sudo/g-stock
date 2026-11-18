@@ -2,7 +2,7 @@ import type { InventoryActivity as Activity } from '../types/inventory'
 import './InventoryManagement.css'
 
 const dateFormat = new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Johannesburg' })
-const labels: Record<Activity['type'], string> = { 'warehouse-created': 'Warehouse added', 'brand-created': 'Brand added', 'item-created': 'Stock item added', 'quantity-updated': 'Stock quantity updated' }
+const labels: Record<Activity['type'], string> = { 'warehouse-created': 'Warehouse added', 'brand-created': 'Brand added', 'item-created': 'Stock item added', 'quantity-updated': 'Stock quantity updated', 'brand-deleted': 'Brand archived', 'item-deleted': 'Stock item archived' }
 
 export default function InventoryActivity({ events }: { events: readonly Activity[] }) {
   if (!events.length) return null

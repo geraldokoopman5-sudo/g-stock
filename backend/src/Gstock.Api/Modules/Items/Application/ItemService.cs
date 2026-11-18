@@ -11,7 +11,8 @@ using Gstock.Contracts;
 
 namespace Gstock.Api.Modules.Items.Application;
 
-internal sealed record CreateItemInput(Guid BrandId, string? Name, string? Sku, int? Quantity, string? Unit, Guid? WarehouseId);
+internal sealed record CreateItemInput(Guid BrandId, string? Name, string? Sku, int? Quantity, string? Unit,
+    Guid? WarehouseId, string? Location = null, int? ReorderLevel = null);
 internal sealed record AdjustStockInput(string? Mode, int? Quantity, int? ExpectedQuantity, string? Reason);
 
 internal sealed class ItemService(
@@ -26,6 +27,8 @@ internal sealed class ItemService(
         var sku = string.IsNullOrWhiteSpace(input.Sku) ? null :
             ApiRequests.Text(Regex.Replace(input.Sku.Trim(), @"\s+", " "), "sku", 40);
         var quantity = Quantity(input.Quantity, "quantity");
+        var location = ApiRequests.Text(input.Location ?? "", "location", 80);
+        var reorderLevel = Quantity(input.ReorderLevel ?? 0, "reorderLevel");
         var unit = input.Unit?.Trim().ToLowerInvariant();
         if (unit is not ("units" or "boxes" or "rolls" or "cases" or "pairs"))
         {
@@ -40,7 +43,8 @@ internal sealed class ItemService(
             {
                 throw ApiError.Invalid("warehouseId", "The item must belong to its brand's warehouse.");
             }
-            var item = await items.InsertAsync(input.BrandId, brand.WarehouseId, name, sku, quantity, unit, transaction, ct);
+            var item = await items.InsertAsync(input.BrandId, brand.WarehouseId, name, sku, quantity, unit,
+                location, reorderLevel, transaction, ct);
             await activity.AddAsync(Event("item-created", item, actor), transaction, ct);
             return item;
         }, token);

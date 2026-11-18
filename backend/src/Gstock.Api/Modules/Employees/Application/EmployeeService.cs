@@ -13,17 +13,17 @@ internal sealed record EmployeeProfile(
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles AccountRole,
     string Role,
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))] AccountStatus Status,
-    DateTime CreatedAt, DateTime UpdatedAt);
+    DateTime CreatedAt, DateTime UpdatedAt, string Department);
 
 internal sealed record CreateEmployeeInput(
     string? EmployeeId, string? FullName, string? Email,
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles? AccountRole,
-    string? Role, string? Password);
+    string? Role, string? Password, string? Department = null);
 
 internal sealed record EditEmployeeInput(
     string? EmployeeId, string? FullName, string? Email, string? Role,
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))] AccountStatus? Status,
-    string? Password);
+    string? Password, string? Department = null);
 
 internal sealed record EmployeeFieldChange(string Field, string Before, string After);
 internal sealed record EmployeeEditor(Guid Id, string EmployeeId, string FullName, string Role);
@@ -53,7 +53,7 @@ internal sealed class EmployeeService(
         {
             await employees.RequireRoleAsync(actorId, AccountRoles.StaffManager, transaction, ct);
             return await repository.InsertAsync(employeeId, name, email, role, accountRole,
-                Argon2idPasswordVerifier.Hash(password), transaction, ct);
+                Argon2idPasswordVerifier.Hash(password), ApiRequests.Text(input.Department ?? "", "department", 80), transaction, ct);
         }, token);
     }
 
@@ -80,7 +80,8 @@ internal sealed class EmployeeService(
                 FullName = input.FullName is null ? before.FullName : ApiRequests.RequiredText(input.FullName, "fullName", 100),
                 Email = input.Email is null ? before.Email : Email(input.Email),
                 Role = input.Role is null ? before.Role : ApiRequests.RequiredText(input.Role, "role", 80),
-                Status = input.Status ?? before.Status
+                Status = input.Status ?? before.Status,
+                Department = input.Department is null ? before.Department : ApiRequests.Text(input.Department, "department", 80)
             };
             var changes = ProfileChanges(before, after);
             if (changes.Count == 0 && password is null)
@@ -113,6 +114,7 @@ internal sealed class EmployeeService(
         Add("full_name", before.FullName, after.FullName);
         Add("email", before.Email, after.Email);
         Add("role", before.Role, after.Role);
+        Add("department", before.Department, after.Department);
         Add("is_active", before.Status == AccountStatus.Active ? "true" : "false",
             after.Status == AccountStatus.Active ? "true" : "false");
         return changes;

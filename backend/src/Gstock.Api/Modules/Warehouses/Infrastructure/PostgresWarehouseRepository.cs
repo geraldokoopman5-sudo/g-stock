@@ -11,7 +11,7 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
     public async Task<IReadOnlyList<Warehouse>> ListAsync(CancellationToken cancellationToken)
     {
         const string sql = """
-            SELECT id, name, street_name, suburb_name, city, province, postal_code
+            SELECT id, name, street_name, suburb_name, city, province, postal_code, contact_name, contact_email, notes
             FROM public.warehouses
             ORDER BY name, id;
             """;
@@ -32,7 +32,7 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
     public async Task<Warehouse?> FindAsync(Guid id, CancellationToken cancellationToken)
     {
         const string sql = """
-            SELECT id, name, street_name, suburb_name, city, province, postal_code
+            SELECT id, name, street_name, suburb_name, city, province, postal_code, contact_name, contact_email, notes
             FROM public.warehouses WHERE id = @id;
             """;
         await using var command = dataSource.CreateCommand(sql);
@@ -49,7 +49,10 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
         SuburbName = reader.GetString(3),
         City = reader.GetString(4),
         Province = reader.GetString(5),
-        PostalCode = reader.GetInt32(6)
+        PostalCode = reader.GetInt32(6),
+        ContactName = reader.GetString(7),
+        ContactEmail = reader.GetString(8),
+        Notes = reader.GetString(9)
     };
 
     public async Task AddAsync(
@@ -64,9 +67,9 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
 
         const string sql = """
             INSERT INTO public.warehouses (
-                id, name, street_name, suburb_name, city, province, postal_code
+                id, name, street_name, suburb_name, city, province, postal_code, contact_name, contact_email, notes
             )
-            VALUES (@id, @name, @street_name, @suburb_name, @city, @province, @postal_code);
+            VALUES (@id, @name, @street_name, @suburb_name, @city, @province, @postal_code, @contact_name, @contact_email, @notes);
             """;
 
         await using var command = new NpgsqlCommand(sql, connection, postgresTransaction);
@@ -77,6 +80,9 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
         command.Parameters.AddWithValue("city", warehouse.City);
         command.Parameters.AddWithValue("province", warehouse.Province);
         command.Parameters.AddWithValue("postal_code", warehouse.PostalCode);
+        command.Parameters.AddWithValue("contact_name", warehouse.ContactName);
+        command.Parameters.AddWithValue("contact_email", warehouse.ContactEmail);
+        command.Parameters.AddWithValue("notes", warehouse.Notes);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

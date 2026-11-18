@@ -6,6 +6,7 @@ export const employeeStorageKey = 'g-stock.employee-accounts.v1'
 export const employeeFields = ['employeeId', 'fullName', 'department', 'role', 'email'] as const satisfies readonly EmployeeField[]
 export const employeeFieldLabels: Record<EmployeeField, string> = {
   employeeId: 'Employee ID', fullName: 'Full name', department: 'Department', role: 'Role', email: 'Email address',
+  status: 'Account status',
 }
 
 export function isManager(employee: EmployeeProfile) {
@@ -15,6 +16,7 @@ export function isManager(employee: EmployeeProfile) {
 // Temporary preview policy. Restore this flag when manager-only editing is needed.
 export const restrictEmployeeEditingToManagers = false
 export function canEditEmployeeAccounts(employee: EmployeeProfile) {
+  if (employee.accountRole) return employee.status === 'Active' && employee.accountRole === 'StaffManager'
   return !restrictEmployeeEditingToManagers || isManager(employee)
 }
 
@@ -33,7 +35,7 @@ function isStoredAccount(value: unknown): value is EmployeeAccount {
     const editor = edit.editedBy
     if (edit.passwordChanged !== undefined && typeof edit.passwordChanged !== 'boolean') return false
     if (!isRecord(editor) || !['id', 'employeeId', 'fullName', 'role'].every((key) => typeof editor[key] === 'string')) return false
-    return Array.isArray(edit.changes) && edit.changes.every((change: unknown) => isRecord(change) && employeeFields.includes(change.field as EmployeeField) && typeof change.before === 'string' && typeof change.after === 'string')
+    return Array.isArray(edit.changes) && edit.changes.every((change: unknown) => isRecord(change) && employeeFields.some((field) => field === change.field) && typeof change.before === 'string' && typeof change.after === 'string')
   })
 }
 

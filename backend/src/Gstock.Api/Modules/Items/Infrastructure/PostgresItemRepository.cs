@@ -8,7 +8,7 @@ namespace Gstock.Api.Modules.Items.Infrastructure;
 
 internal sealed class PostgresItemRepository(NpgsqlDataSource source)
 {
-    private const string Columns = "id, brand_id, warehouse_id, name, sku, quantity, unit, added_at";
+    private const string Columns = "id, brand_id, warehouse_id, name, sku, quantity, unit, added_at, location, reorder_level";
 
     public async Task<IReadOnlyList<InventoryItems>> ReadAsync(Guid? id, Guid? warehouseId, Guid? brandId,
         string? query, int limit, int offset, CancellationToken token)
@@ -53,16 +53,17 @@ internal sealed class PostgresItemRepository(NpgsqlDataSource source)
     }
 
     public async Task<InventoryItems> InsertAsync(Guid brandId, Guid warehouseId, string name, string? sku,
-        int quantity, string unit, DbTransaction transaction, CancellationToken token)
+        int quantity, string unit, string location, int reorderLevel, DbTransaction transaction, CancellationToken token)
     {
         const string sql = $"""
-            INSERT INTO public.inventory_items (id, brand_id, warehouse_id, name, sku, quantity, unit)
-            VALUES (@id, @brand, @warehouse, @name, @sku, @quantity, @unit)
+            INSERT INTO public.inventory_items (id, brand_id, warehouse_id, name, sku, quantity, unit, location, reorder_level)
+            VALUES (@id, @brand, @warehouse, @name, @sku, @quantity, @unit, @location, @reorder)
             RETURNING {Columns};
             """;
         await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", Guid.NewGuid())
             .Bind("brand", brandId).Bind("warehouse", warehouseId).Bind("name", name)
-            .BindNullable("sku", NpgsqlDbType.Text, sku).Bind("quantity", quantity).Bind("unit", unit);
+            .BindNullable("sku", NpgsqlDbType.Text, sku).Bind("quantity", quantity).Bind("unit", unit)
+            .Bind("location", location).Bind("reorder", reorderLevel);
         await using var reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token))
         {
@@ -87,5 +88,6 @@ internal sealed class PostgresItemRepository(NpgsqlDataSource source)
 
     private static InventoryItems Read(NpgsqlDataReader reader) => new(
         reader.GetGuid(0), reader.GetGuid(1), reader.GetGuid(2), reader.GetString(3),
-        reader.NullableText(4), reader.GetInt32(5), reader.GetString(6), reader.GetDateTime(7));
+        reader.NullableText(4), reader.GetInt32(5), reader.GetString(6), reader.GetDateTime(7),
+        reader.GetString(8), reader.GetInt32(9));
 }

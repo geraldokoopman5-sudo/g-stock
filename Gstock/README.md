@@ -1,75 +1,50 @@
-# React + TypeScript + Vite
+# G-Stock staff workspace
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The React workspace connects to the .NET API at `/api/v1`. Login, employee profiles and edits, warehouses, brands, items, stock adjustments, and activity use PostgreSQL through the API. Existing browser demo data is not imported.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Use Node.js 24 and the .NET 10 SDK. Follow [backend setup](../backend/README.md) to configure PostgreSQL, migrate it, and provision manager accounts. Apply migration `003_frontend_fields.sql` before starting this version; it adds departments, warehouse contact details, stock locations, and reorder levels.
 
-## React Compiler
+From the repository root, start the backend:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+dotnet run --project .\backend\src\Gstock.Api --launch-profile http
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+In a second terminal:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+cd Gstock
+npm.cmd ci
+npm.cmd run dev
 ```
+
+Open the localhost URL printed by Vite (normally `http://localhost:5173`). Vite proxies `/api` to `http://localhost:5268`, preserving the original host so the API's same-origin checks work. Use `localhost` for the browser URL. Secure cookies are supported on localhost; deployed environments require HTTPS. `npm.cmd run preview` uses the same API proxy for checking a production build locally.
+
+Sign in with an account provisioned in the backend. A staff manager can create a normal employee through `POST /api/v1/employees` (the existing UI edits accounts but does not create them).
+
+| Account role | Allowed changes |
+| --- | --- |
+| All active accounts | Create warehouses |
+| StockManager | Create brands |
+| Nemployee | Create items and adjust quantities |
+| StaffManager | Edit normal employee accounts and passwords |
+
+These permissions follow the existing API policy; a manager does not automatically inherit normal employee stock permissions. The API enforces authorization independently of the UI.
+
+## Sessions and deployment
+
+Access tokens remain in memory. The API sets an HttpOnly refresh cookie; session restoration and access-token renewal obtain a CSRF token before rotating the cookie. Remember me is passed to the backend to control session persistence. Logout revokes the session and clears its cookie. Failed requests display API validation, permission, and stock-conflict messages.
+
+For deployment, serve `dist` and `/api/v1` under the same HTTPS origin using a reverse proxy. Preserve the public host and configure the API's request scheme correctly at the trusted proxy. Cross-origin hosting is incompatible with the API's current cookie and same-origin policy.
+
+## Checks
+
+```powershell
+npm.cmd run build
+npm.cmd run lint
+npm.cmd test
+```
+
+Tests cover the existing UI/data helpers plus API credentials, CSRF refresh concurrency, request retries, validation errors, session expiry, and logout. The legacy browser-store helpers remain for their existing tests and fixtures; the application no longer uses them for authentication or persistence.

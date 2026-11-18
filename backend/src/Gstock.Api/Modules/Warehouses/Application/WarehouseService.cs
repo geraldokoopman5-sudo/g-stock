@@ -12,7 +12,7 @@ internal sealed record CreateWarehouseInput(
     string? SuburbName,
     string? City,
     string? Province,
-    int? PostalCode);
+    int? PostalCode, string? ContactName = null, string? ContactEmail = null, string? Notes = null);
 
 internal sealed class WarehouseService(
     IWarehouseRepository warehouses,
@@ -34,7 +34,10 @@ internal sealed class WarehouseService(
             City = ApiRequests.RequiredText(input.City, "city"),
             Province = ApiRequests.RequiredText(input.Province, "province"),
             PostalCode = input.PostalCode
-                ?? throw ApiError.Invalid("postalCode", "Postal code is required.")
+                ?? throw ApiError.Invalid("postalCode", "Postal code is required."),
+            ContactName = ApiRequests.Text(input.ContactName ?? "", "contactName", 100),
+            ContactEmail = ApiRequests.Text(input.ContactEmail ?? "", "contactEmail", 254),
+            Notes = ApiRequests.Text(input.Notes ?? "", "notes", 1000)
         };
 
         return database.RunAsync(async (transaction, token) =>

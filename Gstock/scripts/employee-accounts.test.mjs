@@ -167,3 +167,18 @@ test('invalid password lengths are rejected and identical passwords receive diff
   assert.notEqual(first.salt, second.salt)
   assert.notEqual(first.hash, second.hash)
 })
+
+test('API account roles restrict editing to staff managers targeting normal employees', () => {
+  const { accounts, employee, manager } = scenario()
+  const normal = { ...employee, accountRole: 'Nemployee', status: 'Active' }
+  const staff = { ...manager, accountRole: 'StaffManager', status: 'Active' }
+  const stock = { ...manager, accountRole: 'StockManager', status: 'Active' }
+  const apiAccounts = accounts.map((account) => ({ ...account, profile: account.profile.id === normal.id ? normal : { ...account.profile, accountRole: 'StaffManager', status: 'Active' } }))
+  const render = (viewer, selectedId = normal.id) => renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts: apiAccounts, viewer, selectedId, onSave: async () => null }))
+  assert.ok(render(staff).includes('>Edit</button>'))
+  assert.ok(!render(normal).includes('>Edit</button>'))
+  assert.ok(!render(stock).includes('>Edit</button>'))
+  assert.ok(!render({ ...staff, status: 'InActive' }).includes('>Edit</button>'))
+  assert.ok(!render(staff, manager.id).includes('>Edit</button>'))
+  assert.ok(!render(staff).includes('during this preview'))
+})

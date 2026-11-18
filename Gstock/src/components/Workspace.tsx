@@ -8,6 +8,7 @@ import ThemeToggle from './ThemeToggle'
 import type { InventoryState, SaveInventoryAction } from '../types/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
 import type { WorkspaceIconName } from './WorkspaceIcon'
+import type { WorkspacePermissions } from '../api/workspace'
 import './Workspace.css'
 
 const pages = [
@@ -28,15 +29,24 @@ function currentPage() {
 
 interface WorkspaceProps {
   employee: EmployeeProfile
+  permissions?: WorkspacePermissions
   accounts: EmployeeAccount[]
   onSaveEmployee: (accountId: string, details: EmployeeUpdate) => Promise<string | null>
   inventory: InventoryState
   onInventoryAction: SaveInventoryAction
+  onOpenEmployee?: (id: string) => Promise<void>
+  signingOut?: boolean
   active: boolean
   onSignOut: () => void
 }
 
-export default function Workspace({ employee, accounts, onSaveEmployee, inventory, onInventoryAction, active, onSignOut }: WorkspaceProps) {
+export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, inventory, onInventoryAction, onOpenEmployee, active, onSignOut, signingOut }: WorkspaceProps) {
+  const permissions = grantedPermissions ?? {
+    canCreateWarehouse: employee.status !== 'InActive',
+    canManageBrands: !employee.accountRole || employee.accountRole === 'StockManager',
+    canManageItems: !employee.accountRole || employee.accountRole === 'Nemployee',
+    canManageEmployees: employee.accountRole === 'StaffManager',
+  }
   const route = useSyncExternalStore(subscribeToPage, currentPage, () => '#home')
   const [routePage, selectedId] = route.slice(1).split('/')
   const page = pages.find((entry) => entry.id === routePage) ?? pages[0]
@@ -98,11 +108,11 @@ export default function Workspace({ employee, accounts, onSaveEmployee, inventor
             </section>
           </div>
         ) : pageId === 'employees' ? (
-          <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} />
+          <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} onOpen={onOpenEmployee} />
         ) : pageId === 'inventory' ? (
-          <Inventory selectedBrandId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
+          <Inventory selectedBrandId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} permissions={permissions} />
         ) : (
-          <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} />
+          <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} permissions={permissions} />
         )}
       </main>
       <footer className="workspace__footer"><span>G-Stock · Staff workspace</span><span>Everything in its place.</span></footer>
@@ -124,7 +134,7 @@ export default function Workspace({ employee, accounts, onSaveEmployee, inventor
                 </li>
               ))}
             </ul>
-            <button type="button" className="workspace-navigation__signout" onClick={onSignOut}><WorkspaceIcon name="logout" />Log out</button>
+            <button type="button" className="workspace-navigation__signout" onClick={onSignOut} disabled={signingOut}><WorkspaceIcon name="logout" />{signingOut ? 'Logging out...' : 'Log out'}</button>
           </nav>
         )}
         <button ref={triggerRef} className={`workspace-navigation__trigger${navigationOpen ? ' workspace-navigation__trigger--open' : ''}`} aria-expanded={navigationOpen} aria-controls="workspace-navigation" type="button" onClick={() => setNavigationOpen(!navigationOpen)}>

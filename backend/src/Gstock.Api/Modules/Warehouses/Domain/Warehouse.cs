@@ -9,4 +9,7 @@ public class Warehouse
     public required string City{get; init;}
     public required string Province{get; init;}
     public required int PostalCode{get; init;}
+    public string ContactName { get; init; } = "";
+    public string ContactEmail { get; init; } = "";
+    public string Notes { get; init; } = "";
 }

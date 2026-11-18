@@ -4,6 +4,11 @@ export interface InventoryWarehouse {
   contactName?: string
   contactEmail?: string
   notes?: string
+  streetName?: string
+  suburbName?: string
+  city?: string
+  province?: string
+  postalCode?: number
 }
 
 export interface InventoryBrand {
@@ -48,7 +53,7 @@ export interface InventoryActor {
 
 export interface InventoryActivity {
   id: string
-  type: 'warehouse-created' | 'brand-created' | 'item-created' | 'quantity-updated'
+  type: 'warehouse-created' | 'brand-created' | 'item-created' | 'quantity-updated' | 'brand-deleted' | 'item-deleted'
   entityId: string
   entityName: string
   warehouseId: string
@@ -79,4 +84,4 @@ export type InventoryAction =
 
 export type InventorySaveResult = { ok: true; entityId: string } | { ok: false; error: string }
 export type InventoryMutationResult = { ok: true; entityId: string; state: InventoryState } | { ok: false; error: string }
-export type SaveInventoryAction = (action: InventoryAction) => InventorySaveResult
+export type SaveInventoryAction = (action: InventoryAction) => InventorySaveResult | Promise<InventorySaveResult>

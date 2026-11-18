@@ -21,6 +21,12 @@ dotnet run --project .\backend\src\Gstock.Api --launch-profile http -- --migrate
 
 The migration command applies pending SQL files from `backend/migrations` in filename order. It records each applied file in `public.schema_migrations`.
 
+The integrated frontend requires `003_frontend_fields.sql`. This additive migration persists employee departments, warehouse contacts and notes, item storage locations, and low-stock thresholds. Existing records receive empty text fields and a zero threshold. Apply it before running the updated API.
+
+## Run the integrated frontend
+
+Start the API with the `http` launch profile (`http://localhost:5268`), then run `npm.cmd ci` and `npm.cmd run dev` from `Gstock`. Open Vite's **localhost** URL. Its `/api` proxy preserves the browser origin, allowing the existing same-origin and CSRF protections to work without enabling CORS. See the [workspace README](../Gstock/README.md) for role permissions, session behavior, and deployment setup.
+
 ## Create development accounts
 
 Run the corresponding line once for each manager account you still need. These commands also apply pending migrations and set up development token signing if needed. Choose a G-Stock email and password at each prompt.

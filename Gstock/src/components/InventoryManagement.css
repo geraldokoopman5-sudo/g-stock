@@ -38,3 +38,10 @@
 .stock-activity li > p { margin-top: 8px; font-size: 12px; line-height: 1.6; }
 .stock-activity__reason { font-style: italic; }
 @media (max-width: 480px) { .stock-dialog__content { padding: 22px; } .stock-form__row { grid-template-columns: 1fr; } }
+.stock-form__fields {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}

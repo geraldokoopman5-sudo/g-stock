@@ -9,7 +9,7 @@ namespace Gstock.Api.Modules.Employees.Infrastructure;
 
 internal sealed class PostgresEmployeeRepository(NpgsqlDataSource source)
 {
-    private const string Columns = "id, employee_id, full_name, email, account_role::text, role, is_active, created_at, updated_at";
+    private const string Columns = "id, employee_id, full_name, email, account_role::text, role, is_active, created_at, updated_at, department";
 
     public async Task<IReadOnlyList<EmployeeProfile>> ReadAsync(Guid? id, string? query, int limit, int offset, CancellationToken token)
     {
@@ -50,13 +50,13 @@ internal sealed class PostgresEmployeeRepository(NpgsqlDataSource source)
     }
 
     public async Task<EmployeeProfile> InsertAsync(
-        string employeeId, string fullName, string email, string role, AccountRoles accountRole, string hash,
+        string employeeId, string fullName, string email, string role, AccountRoles accountRole, string hash, string department,
         DbTransaction transaction, CancellationToken token)
     {
         const string sql = $"""
             WITH new_employee AS (
-                INSERT INTO public.employees (id, employee_id, full_name, email, account_role, role)
-                VALUES (@id, @number, @name, @email, CAST(@account_role AS public.account_role), @role)
+                INSERT INTO public.employees (id, employee_id, full_name, email, account_role, role, department)
+                VALUES (@id, @number, @name, @email, CAST(@account_role AS public.account_role), @role, @department)
                 RETURNING *
             ), new_credential AS (
                 INSERT INTO public.employee_credentials (employee_id, password_hash)
@@ -66,7 +66,7 @@ internal sealed class PostgresEmployeeRepository(NpgsqlDataSource source)
             """;
         await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", Guid.NewGuid())
             .Bind("number", employeeId).Bind("name", fullName).Bind("email", email).Bind("role", role)
-            .Bind("account_role", EmployeeRoleMapping.Write(accountRole)).Bind("hash", hash);
+            .Bind("account_role", EmployeeRoleMapping.Write(accountRole)).Bind("hash", hash).Bind("department", department);
         await using var reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token))
         {
@@ -79,12 +79,12 @@ internal sealed class PostgresEmployeeRepository(NpgsqlDataSource source)
     {
         const string sql = $"""
             UPDATE public.employees SET employee_id = @number, full_name = @name, email = @email,
-                role = @role, is_active = @active, updated_at = clock_timestamp() WHERE id = @id
+                role = @role, department = @department, is_active = @active, updated_at = clock_timestamp() WHERE id = @id
             RETURNING {Columns};
             """;
         await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", changed.Id)
             .Bind("number", changed.EmployeeId).Bind("name", changed.FullName).Bind("email", changed.Email)
-            .Bind("role", changed.Role).Bind("active", changed.Status == AccountStatus.Active);
+            .Bind("role", changed.Role).Bind("active", changed.Status == AccountStatus.Active).Bind("department", changed.Department);
         await using var reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token))
         {
@@ -174,5 +174,5 @@ internal sealed class PostgresEmployeeRepository(NpgsqlDataSource source)
         reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
         EmployeeRoleMapping.Read(reader.GetString(4)), reader.GetString(5),
         reader.GetBoolean(6) ? AccountStatus.Active : AccountStatus.InActive,
-        reader.GetDateTime(7), reader.GetDateTime(8));
+        reader.GetDateTime(7), reader.GetDateTime(8), reader.GetString(9));
 }

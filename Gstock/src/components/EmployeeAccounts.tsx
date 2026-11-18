@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import type { EmployeeAccount, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import { canEditEmployeeAccounts, employeeFieldLabels, employeeFields, restrictEmployeeEditingToManagers } from '../data/employeeAccounts'
 import EmployeeCard from './EmployeeCard'
+import { errorMessage } from '../api/client'
 import WorkspaceIcon from './WorkspaceIcon'
 import ListPagination from './ListPagination'
 import { usePagination } from '../hooks/usePagination'
 import './EmployeeAccounts.css'
 
 interface EmployeeAccountsProps {
+  onOpen?: (id: string) => Promise<void>
   accounts: EmployeeAccount[]
   viewer: EmployeeProfile
   selectedId?: string
@@ -88,7 +90,7 @@ function EmployeeAccountDetail({ account, viewer, onSave }: {
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
   const heading = useRef<HTMLHeadingElement>(null)
-  const canEdit = canEditEmployeeAccounts(viewer)
+  const canEdit = canEditEmployeeAccounts(viewer) && (!account.profile.accountRole || account.profile.accountRole === 'Nemployee')
   const latestEdit = account.editHistory.at(-1)
 
   useEffect(() => {
@@ -119,7 +121,7 @@ function EmployeeAccountDetail({ account, viewer, onSave }: {
               {latestEdit ? (
                 <p className="employee-accounts__last-edit">By <strong>{latestEdit.editedBy.fullName}</strong> · {latestEdit.editedBy.employeeId}<br /><time dateTime={latestEdit.editedAt}>{dateFormat.format(new Date(latestEdit.editedAt))} SAST</time></p>
               ) : <p>Changes to this account will appear here, along with the employee who made them.</p>}
-              {!canEdit && <p className="employee-accounts__permission">Only employees with the Manager role can edit accounts.</p>}
+              {!canEdit && <p className="employee-accounts__permission">Staff managers can edit normal employee accounts.</p>}
               {account.editHistory.length > 0 && (
                 <details className="employee-accounts__history">
                   <summary>Edit history ({account.editHistory.length})</summary>
@@ -144,8 +146,21 @@ function EmployeeAccountDetail({ account, viewer, onSave }: {
   )
 }
 
-export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave }: EmployeeAccountsProps) {
+export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave, onOpen }: EmployeeAccountsProps) {
   const [search, setSearch] = useState('')
+  const [historyResult, setHistoryResult] = useState({ id: '', error: '' })
+  const historyError = historyResult.id === selectedId ? historyResult.error : ''
+  const loadingHistory = Boolean(onOpen && selectedId && historyResult.id !== selectedId)
+  useEffect(() => {
+    if (!selectedId || !onOpen) return
+    let cancelled = false
+    void onOpen(decodeURIComponent(selectedId)).then(() => {
+      if (!cancelled) setHistoryResult({ id: selectedId, error: '' })
+    }).catch((error) => {
+      if (!cancelled) setHistoryResult({ id: selectedId, error: errorMessage(error) })
+    })
+    return () => { cancelled = true }
+  }, [selectedId, onOpen])
   const heading = useRef<HTMLHeadingElement>(null)
   const query = search.trim().toLowerCase()
   const filtered = accounts.filter(({ profile }) => employeeFields.some((field) => profile[field].toLowerCase().includes(query)))
@@ -154,7 +169,11 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave 
 
   if (selectedId) {
     const account = accounts.find((entry) => encodeURIComponent(entry.profile.id) === selectedId)
-    if (account) return <EmployeeAccountDetail key={account.profile.id} account={account} viewer={viewer} onSave={onSave} />
+    if (account) return <>
+      {loadingHistory && <p role="status">Loading account activity...</p>}
+      {historyError && <p role="alert">{historyError} <button type="button" onClick={() => { if (onOpen) void onOpen(account.profile.id).then(() => setHistoryResult({ id: selectedId, error: '' })).catch((error) => setHistoryResult({ id: selectedId, error: errorMessage(error) })) }}>Retry</button></p>}
+      <EmployeeAccountDetail key={account.profile.id} account={account} viewer={viewer} onSave={onSave} />
+    </>
     return <section className="employee-accounts"><h1 ref={heading} tabIndex={-1}>Account not found</h1><a className="employee-accounts__back" href="#employees">Back to employee accounts</a></section>
   }
 
@@ -164,7 +183,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave 
       <h1 id="employee-accounts-heading" ref={heading} tabIndex={-1}>Employee accounts</h1>
       <p className="workspace__description">Find an employee and open their card.</p>
       <p className="employee-accounts__viewer">Viewing as <strong>{viewer.fullName}</strong> · {viewer.role}</p>
-      {!restrictEmployeeEditingToManagers && <p className="employee-accounts__viewer">All employee accounts can edit details and passwords during this preview.</p>}
+      {!viewer.accountRole && !restrictEmployeeEditingToManagers && <p className="employee-accounts__viewer">All employee accounts can edit details and passwords during this preview.</p>}
       <div className="employee-accounts__toolbar">
         <div><label htmlFor="employee-search">Search employee accounts</label><input id="employee-search" type="search" placeholder="Name, ID, email, department, or role" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
         <p role="status">{filtered.length} {filtered.length === 1 ? 'account' : 'accounts'}</p>
@@ -175,7 +194,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave 
           <li key={profile.id}>
             <a href={`#employees/${encodeURIComponent(profile.id)}`}>
               <span className="employee-accounts__name"><strong>{profile.fullName}</strong><span>{profile.employeeId} · {profile.email}</span></span>
-              <span className="employee-accounts__department">{profile.department}</span>
+              <span className="employee-accounts__department">{profile.department || 'Not assigned'}</span>
               <span className="employee-accounts__role">{profile.role}</span>
               <WorkspaceIcon name="arrow" size={18} />
             </a>

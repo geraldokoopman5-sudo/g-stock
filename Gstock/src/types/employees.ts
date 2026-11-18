@@ -11,6 +11,8 @@ export interface Employee extends User {
   employeeId: string
   department: string
   role: string
+  accountRole?: 'Nemployee' | 'StockManager' | 'StaffManager'
+  status?: 'Active' | 'InActive'
 }
 
 /** Only this password-free shape is used by the homepage and employee card. */
@@ -19,7 +21,7 @@ export type UserCredentials = Pick<User, 'email' | 'password'>
 
 export type EmployeeDetails = Pick<EmployeeProfile, 'employeeId' | 'department' | 'role' | 'email' | 'fullName'>
 export type EmployeeUpdate = EmployeeDetails & { password?: string }
-export type EmployeeField = keyof EmployeeDetails
+export type EmployeeField = keyof EmployeeDetails | 'status'
 
 export interface EmployeeChange {
   field: EmployeeField
