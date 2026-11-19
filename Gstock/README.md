@@ -20,7 +20,15 @@ npm.cmd ci
 npm.cmd run dev
 ```
 
-Open the localhost URL printed by Vite (normally `http://localhost:5173`). Vite proxies `/api` to `http://localhost:5268`, preserving the original host so the API's same-origin checks work. Use `localhost` for the browser URL. Secure cookies are supported on localhost; deployed environments require HTTPS. `npm.cmd run preview` uses the same API proxy for checking a production build locally.
+Open the localhost URL printed by Vite (normally `http://localhost:5173`). Vite proxies `/api/v1` to `http://localhost:5268` by default. Use `localhost` for the browser URL. Secure cookies are supported on localhost; deployed environments require HTTPS. `npm.cmd run preview` uses the same API proxy for checking a production build locally.
+
+To use the hosted Render backend during local frontend development, copy `Gstock/.env.example` to `Gstock/.env.local` and replace the example with the actual Render URL:
+
+```dotenv
+API_PROXY_TARGET=https://YOUR-SERVICE.onrender.com
+```
+
+Run `npm.cmd run dev` from `Gstock` and restart Vite whenever you change this setting. The target must be the root HTTPS URL without an API path. The proxy translates the host and a matching local browser Origin for the upstream server. It preserves cookies, authorization, CSRF headers, and fetch metadata. Invalid browser origins still reach the API's rejection checks.
 
 Sign in with an account provisioned in the backend. Staff managers can open **Employee accounts → Add employee account** to create an Employee, Stock Manager, or Staff Manager. The form saves through `POST /api/v1/employees` and the new account can sign in immediately.
 
@@ -42,7 +50,28 @@ Brands and stock items accept an optional PNG or JPEG picture up to 1 MiB, with 
 
 Access tokens remain in memory. The API sets an HttpOnly refresh cookie; session restoration and access-token renewal obtain a CSRF token before rotating the cookie. Remember me is passed to the backend to control session persistence. Logout revokes the session and clears its cookie. Failed requests display API validation, permission, and stock-conflict messages.
 
-For deployment, serve `dist` and `/api/v1` under the same HTTPS origin using a reverse proxy. Preserve the public host and configure the API's request scheme correctly at the trusted proxy. Cross-origin hosting is incompatible with the API's current cookie and same-origin policy.
+### Render backend and Vercel frontend
+
+Deploy the backend to Render using `backend/Dockerfile`. Set the database and JWT variables from the backend deployment guide, including `ASPNETCORE_ENVIRONMENT=Production` and `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. Apply all SQL migrations locally against the Supabase database before starting the current backend. The migrations and manager provisioning commands run in Development.
+
+In Vercel, import this repository with these settings:
+
+| Setting | Value |
+| --- | --- |
+| Root Directory | `Gstock` |
+| Framework | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Node.js Version | 24.x |
+| Environment variable | `API_PROXY_TARGET=https://YOUR-SERVICE.onrender.com` |
+
+Set the variable for each Vercel environment that should call this backend, then deploy. The value is the backend's root HTTPS URL. Vercel runs `api/[...path].js` for `/api/v1/*` requests using the configuration in `vercel.json`. Access tokens, cookies, JSON uploads, validation errors, and binary pictures pass through the proxy. Supabase credentials and JWT signing keys belong in the backend hosting environment.
+
+The browser always calls relative `/api/v1` URLs on the frontend origin. The proxy validates the incoming browser Origin and fetch metadata before translating the Origin for the backend. The HttpOnly, Secure refresh cookie is stored on the frontend host, which lets refresh and logout work with the existing SameSite policy. The API keeps enforcing its CSRF token checks and session validation. No browser CORS allowlist is required for this proxy arrangement.
+
+The proxy returns a configuration error if `API_PROXY_TARGET` is missing, and an availability error if Render cannot respond within 55 seconds. A sleeping Render Free service can take around a minute to wake. Retry after it has started. API responses through the hosted proxy are marked `no-store`.
+
+After deploying, sign in with a persisted employee, reload the page to verify session restoration, save an authorized warehouse or stock change, check that it appears after reloading, and log out. Confirm a second account sees the saved catalogue and activity. Local development can use the same backend by setting `Gstock/.env.local` as described above.
 
 ## Checks
 

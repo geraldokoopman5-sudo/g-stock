@@ -23,6 +23,13 @@
 .stock-form select:focus-visible, .stock-form textarea:focus-visible { outline: 3px solid var(--color-nordic-blue); outline-offset: 4px; }
 .stock-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .stock-form__row .field + .field { margin-top: 0; }
+.stock-location-wrap { margin-top: 20px; }
+.stock-location { width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; }
+.stock-location caption { margin-bottom: 10px; color: var(--color-text-secondary); text-align: left; font-size: 13px; }
+.stock-location th, .stock-location td { padding: 10px; border: 1px solid var(--color-border); }
+.stock-location th { background: var(--color-surface-muted); font-size: 12px; font-weight: 500; }
+.stock-location label { display: block; margin: 0; }
+.stock-location input { min-width: 0; padding: 10px 8px; }
 .stock-form__balance { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 14px; background: rgb(var(--color-mist-blue-rgb) / .15); border-radius: 10px; font-size: 12px; color: var(--color-text-secondary); }
 .stock-form__balance strong { color: var(--color-text); font-size: 15px; font-weight: 500; }
 .stock-form__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }

@@ -39,7 +39,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
   const [contactEmail, setContactEmail] = useState('')
   const [notes, setNotes] = useState('')
   const [description, setDescription] = useState('')
-  const [location, setLocation] = useState('')
+  const [storageLocation, setStorageLocation] = useState({ aisle: '', rack: '', shelf: '' })
   const [quantity, setQuantity] = useState(selection.mode === 'item' ? '0' : '')
   const [unit, setUnit] = useState<(typeof inventoryUnits)[number]>('units')
   const [reorderLevel, setReorderLevel] = useState('0')
@@ -51,6 +51,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
   const savingRef = useRef(false)
   const [address, setAddress] = useState({ streetName: '', suburbName: '', city: '', province: '', postalCode: '' })
   const availableBrands = catalog.brands.filter((entry) => entry.warehouseId === warehouseId)
+  const location = `Aisle ${storageLocation.aisle.trim()} | Rack ${storageLocation.rack.trim()} | Shelf ${storageLocation.shelf.trim()}`
   const title = { warehouse: 'Add warehouse', brand: 'Add brand', item: 'Add stock item', quantity: 'Update stock quantity', 'brand-photo': 'Update brand picture', 'item-photo': 'Update item picture' }[selection.mode]
   const previewQuantity = item && quantity !== '' ? quantityMode === 'set' ? Number(quantity) : expectedQuantity + Number(quantity) * (quantityMode === 'add' ? 1 : -1) : expectedQuantity
 
@@ -69,6 +70,16 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
           event.preventDefault()
           if (savingRef.current || readingPhoto) return
           if (photoEditor && !photo && !removePicture) { setError('Choose a picture or remove the saved picture before saving.'); return }
+          if (selection.mode === 'item') {
+            if (Object.values(storageLocation).some((value) => !value.trim())) {
+              setError('Enter an aisle, rack, and shelf.')
+              return
+            }
+            if (Array.from(location).length > 80) {
+              setError('Use shorter aisle, rack, and shelf values. The combined storage location can have up to 80 characters.')
+              return
+            }
+          }
           let action: InventoryAction
           if (selection.mode === 'warehouse') action = { type: 'add-warehouse', input: { name, contactName, contactEmail, notes, ...address, postalCode: Number(address.postalCode) } }
           else if (selection.mode === 'brand') action = { type: 'add-brand', input: { warehouseId, name, description, ...(photo ? { profilePhoto: photo.profilePhoto } : {}) } }
@@ -109,7 +120,25 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
             {!availableBrands.length && warehouseId && <p className="stock-form__notice">A stock manager must add a brand before its stock can be added. {onAddBrand && <button type="button" onClick={() => onAddBrand(warehouseId)}>Add brand</button>}</p>}
             <div className="field"><label htmlFor={`${id}-name`}>Item name</label><input id={`${id}-name`} value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} /></div>
             <p className="stock-form__notice">A unique SKU will be generated automatically when you save this item.</p>
-            <div className="field"><label htmlFor={`${id}-location`}>Warehouse location</label><input id={`${id}-location`} placeholder="e.g. A-01-01" value={location} onChange={(event) => setLocation(event.target.value)} required maxLength={80} /></div>
+            <div className="stock-location-wrap">
+              <table className="stock-location">
+                <caption>Storage location</caption>
+                <thead>
+                  <tr>{(['aisle', 'rack', 'shelf'] as const).map((field) => (
+                    <th scope="col" key={field}><label htmlFor={`${id}-${field}`}>{{ aisle: 'Aisle', rack: 'Rack', shelf: 'Shelf' }[field]}</label></th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  <tr>{(['aisle', 'rack', 'shelf'] as const).map((field) => (
+                    <td key={field}>
+                      <input id={`${id}-${field}`} name={field} placeholder={field === 'aisle' ? 'e.g. A' : 'e.g. 01'}
+                        value={storageLocation[field]} required maxLength={80}
+                        onChange={(event) => setStorageLocation({ ...storageLocation, [field]: event.target.value })} />
+                    </td>
+                  ))}</tr>
+                </tbody>
+              </table>
+            </div>
             <div className="stock-form__row"><div className="field"><label htmlFor={`${id}-quantity`}>Opening quantity</label><input id={`${id}-quantity`} type="number" min={0} max={maxStockQuantity} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></div><div className="field"><label htmlFor={`${id}-unit`}>Unit</label><select id={`${id}-unit`} value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}>{inventoryUnits.map((value) => <option key={value} value={value}>{value}</option>)}</select></div></div>
             <div className="field"><label htmlFor={`${id}-reorder`}>Low-stock threshold</label><input id={`${id}-reorder`} type="number" min={0} max={maxStockQuantity} step={1} value={reorderLevel} onChange={(event) => setReorderLevel(event.target.value)} required /></div>
           </>}

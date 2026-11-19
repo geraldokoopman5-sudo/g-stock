@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { InventoryActivity as Activity, InventoryCatalog, SaveInventoryAction, StockFilter } from '../types/inventory'
-import { getBrandGroups, getBrandItems, getInventorySummary, getStockStatus, sampleInventory, stockStatusLabels } from '../data/inventory'
+import { getBrandGroups, getBrandItems, getInventorySummary, getStockStatus, stockStatusLabels } from '../data/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
 import type { WorkspacePermissions } from '../api/workspace'
 import InventoryEditor from './InventoryEditor'
@@ -20,7 +20,9 @@ interface InventoryProps {
   onAction?: SaveInventoryAction
 }
 
-export default function Inventory({ selectedBrandId, selectedItemId, catalog = sampleInventory, activity = [], onAction, permissions }: InventoryProps) {
+const emptyCatalog: InventoryCatalog = { warehouses: [], brands: [], items: [] }
+
+export default function Inventory({ selectedBrandId, selectedItemId, catalog = emptyCatalog, activity = [], onAction, permissions }: InventoryProps) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<StockFilter>('all')
   const [warehouseId, setWarehouseId] = useState('all')

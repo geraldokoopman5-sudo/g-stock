@@ -232,5 +232,10 @@ test('the stock creation form explains automatic SKUs and has no manual SKU inpu
   assert.ok(markup.includes('A unique SKU will be generated automatically'))
   assert.ok(!/<input[^>]*(?:id|name)="[^"]*sku/i.test(markup))
   assert.ok(markup.includes('Item name'))
-  assert.ok(markup.includes('Warehouse location'))
+  assert.ok(markup.includes('<caption>Storage location</caption>'))
+  for (const field of ['aisle', 'rack', 'shelf']) {
+    const input = markup.match(new RegExp('<input[^>]*name="' + field + '"[^>]*>'))?.[0]
+    assert.ok(input?.includes('required=""'))
+  }
+  assert.ok(!markup.includes('e.g. A-01-01'))
 })

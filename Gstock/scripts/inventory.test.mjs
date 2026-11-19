@@ -50,11 +50,11 @@ test('warehouse summaries count distinct item lines and stock alerts without add
 })
 
 test('inventory starts with clickable brands and each brand opens only its warehouse items', () => {
-  const root = renderToStaticMarkup(React.createElement(Inventory))
+  const root = renderToStaticMarkup(React.createElement(Inventory, { catalog: inventory.sampleInventory }))
   assert.ok(root.includes('Browse brands'))
   assert.ok(root.includes('Sample inventory'))
   for (const brand of inventory.sampleInventory.brands) assert.ok(root.includes(`#inventory/${brand.id}`))
-  const detail = renderToStaticMarkup(React.createElement(Inventory, { selectedBrandId: 'northline' }))
+  const detail = renderToStaticMarkup(React.createElement(Inventory, { catalog: inventory.sampleInventory, selectedBrandId: 'northline' }))
   assert.ok(detail.includes('NL-001'))
   assert.ok(detail.includes('A-01-01'))
   assert.ok(detail.includes('Low stock'))
