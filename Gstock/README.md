@@ -36,6 +36,8 @@ New stock items receive a SKU automatically when saved; the stock form does not 
 
 Explore shows an alert count and a low-stock list for items at or below their configured threshold, including out-of-stock items. Each alert shows the item, SKU, brand, warehouse, storage location, quantity, and threshold. Opening it selects that exact stock item, even when its table row is on another page. Alerts are calculated from persisted inventory and cannot be dismissed; a partial restock or a quantity equal to the threshold keeps the alert, and a quantity strictly above it clears the alert. The list refreshes on opening Explore, every 30 seconds while it is open and visible, and when returning to the window. Failed refreshes retain the last loaded levels with a message.
 
+Brands and stock items accept an optional PNG or JPEG picture up to 1 MiB, with a preview before saving. Stock managers can add, replace, or remove a brand picture on its inventory page; normal employees can do the same for an item from its row or detail card. Pictures are stored as PostgreSQL `bytea`, sent as base64 in `profilePhoto`, and fetched separately through authenticated `/brands/{id}/photo` and `/items/{id}/photo` endpoints. Catalog responses include `hasProfilePhoto` and `photoUpdatedAt` without loading image bytes. Apply migration `004_inventory_photos.sql` before running this version.
+
 ## Sessions and deployment
 
 Access tokens remain in memory. The API sets an HttpOnly refresh cookie; session restoration and access-token renewal obtain a CSRF token before rotating the cookie. Remember me is passed to the backend to control session persistence. Logout revokes the session and clears its cookie. Failed requests display API validation, permission, and stock-conflict messages.

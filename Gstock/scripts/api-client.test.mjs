@@ -107,3 +107,24 @@ test('restore reports no session separately from an unavailable server', async (
   assert.equal(await createApiClient(async () => new Response(null, { status: 401 })).restore(), false)
   await assert.rejects(createApiClient(async () => { throw new Error('offline') }).restore(), /Could not connect/)
 })
+
+test('protected pictures are fetched as blobs with authentication and retry after token renewal', async () => {
+  const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0])
+  let photoCalls = 0
+  const client = createApiClient(async (url, options) => {
+    if (url.endsWith('/login')) return json({ accessToken: 'old', expiresIn: 900 })
+    if (url.endsWith('/csrf')) return json({ csrfToken: 'csrf-photo' })
+    if (url.endsWith('/refresh')) return json({ accessToken: 'new', expiresIn: 900 })
+    assert.equal(url, '/api/v1/items/test/photo')
+    assert.equal(options.credentials, 'same-origin')
+    photoCalls++
+    if (options.headers.get('Authorization') === 'Bearer old') return new Response(null, { status: 401 })
+    assert.equal(options.headers.get('Authorization'), 'Bearer new')
+    return new Response(bytes, { headers: { 'Content-Type': 'image/png' } })
+  })
+  await client.login('employee@example.test', 'test-password', false)
+  const photo = await client.requestBlob('/items/test/photo')
+  assert.equal(photo.type, 'image/png')
+  assert.deepEqual(new Uint8Array(await photo.arrayBuffer()), bytes)
+  assert.equal(photoCalls, 2)
+})

@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { InventoryAction, InventoryCatalog, QuantityMode, SaveInventoryAction } from '../types/inventory'
 import { inventoryUnits, maxStockQuantity } from '../data/inventoryStore'
+import { readInventoryPhoto } from '../lib/inventoryPhotos'
+import InventoryPhoto from './InventoryPhoto'
 import './InventoryManagement.css'
 
 export interface InventoryEditorSelection {
-  mode: 'warehouse' | 'brand' | 'item' | 'quantity'
+  mode: 'warehouse' | 'brand' | 'item' | 'quantity' | 'brand-photo' | 'item-photo'
   warehouseId?: string
   brandId?: string
   itemId?: string
@@ -24,6 +26,12 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
   const id = useId()
   const item = catalog.items.find((entry) => entry.id === selection.itemId)
   const initialBrand = catalog.brands.find((entry) => entry.id === (selection.brandId ?? item?.brandId))
+  const photoEditor = selection.mode === 'brand-photo' || selection.mode === 'item-photo'
+  const existingPhoto = selection.mode === 'brand-photo' ? initialBrand : item
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [photo, setPhoto] = useState<Awaited<ReturnType<typeof readInventoryPhoto>> | null>(null)
+  const [readingPhoto, setReadingPhoto] = useState(false)
+  const [removePicture, setRemovePicture] = useState(false)
   const [warehouseId, setWarehouseId] = useState(initialBrand?.warehouseId ?? selection.warehouseId ?? catalog.warehouses[0]?.id ?? '')
   const [brandId, setBrandId] = useState(initialBrand?.id ?? catalog.brands.find((entry) => entry.warehouseId === warehouseId)?.id ?? '')
   const [name, setName] = useState('')
@@ -43,7 +51,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
   const savingRef = useRef(false)
   const [address, setAddress] = useState({ streetName: '', suburbName: '', city: '', province: '', postalCode: '' })
   const availableBrands = catalog.brands.filter((entry) => entry.warehouseId === warehouseId)
-  const title = { warehouse: 'Add warehouse', brand: 'Add brand', item: 'Add stock item', quantity: 'Update stock quantity' }[selection.mode]
+  const title = { warehouse: 'Add warehouse', brand: 'Add brand', item: 'Add stock item', quantity: 'Update stock quantity', 'brand-photo': 'Update brand picture', 'item-photo': 'Update item picture' }[selection.mode]
   const previewQuantity = item && quantity !== '' ? quantityMode === 'set' ? Number(quantity) : expectedQuantity + Number(quantity) * (quantityMode === 'add' ? 1 : -1) : expectedQuantity
 
   useEffect(() => {
@@ -54,16 +62,19 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
   }, [])
 
   return (
-    <dialog ref={dialog} className="stock-dialog" aria-labelledby={`${id}-title`} onCancel={(event) => { event.preventDefault(); if (!saving) onClose() }} onClick={(event) => { if (!saving && event.target === event.currentTarget) onClose() }}>
+    <dialog ref={dialog} className="stock-dialog" aria-labelledby={`${id}-title`} onCancel={(event) => { event.preventDefault(); if (!saving && !readingPhoto) onClose() }} onClick={(event) => { if (!saving && !readingPhoto && event.target === event.currentTarget) onClose() }}>
       <div className="stock-dialog__content">
-        <header><div><p className="eyebrow">WAREHOUSE MANAGEMENT</p><h2 id={`${id}-title`}>{title}</h2></div><button className="stock-dialog__close" type="button" aria-label="Close form" disabled={saving} onClick={onClose}>×</button></header>
+        <header><div><p className="eyebrow">WAREHOUSE MANAGEMENT</p><h2 id={`${id}-title`}>{title}</h2></div><button className="stock-dialog__close" type="button" aria-label="Close form" disabled={saving || readingPhoto} onClick={onClose}>×</button></header>
         <form className="stock-form" aria-busy={saving} onSubmit={async (event) => {
           event.preventDefault()
-          if (savingRef.current) return
+          if (savingRef.current || readingPhoto) return
+          if (photoEditor && !photo && !removePicture) { setError('Choose a picture or remove the saved picture before saving.'); return }
           let action: InventoryAction
           if (selection.mode === 'warehouse') action = { type: 'add-warehouse', input: { name, contactName, contactEmail, notes, ...address, postalCode: Number(address.postalCode) } }
-          else if (selection.mode === 'brand') action = { type: 'add-brand', input: { warehouseId, name, description } }
-          else if (selection.mode === 'item') action = { type: 'add-item', input: { brandId, name, location, quantity: Number(quantity), unit, reorderLevel: Number(reorderLevel) } }
+          else if (selection.mode === 'brand') action = { type: 'add-brand', input: { warehouseId, name, description, ...(photo ? { profilePhoto: photo.profilePhoto } : {}) } }
+          else if (selection.mode === 'item') action = { type: 'add-item', input: { brandId, name, location, quantity: Number(quantity), unit, reorderLevel: Number(reorderLevel), ...(photo ? { profilePhoto: photo.profilePhoto } : {}) } }
+          else if (selection.mode === 'brand-photo') action = { type: 'set-brand-photo', brandId: selection.brandId ?? '', profilePhoto: photo?.profilePhoto ?? null }
+          else if (selection.mode === 'item-photo') action = { type: 'set-item-photo', itemId: selection.itemId ?? '', profilePhoto: photo?.profilePhoto ?? null }
           else action = { type: 'adjust-quantity', itemId: selection.itemId ?? '', mode: quantityMode, quantity: Number(quantity), expectedQuantity, reason }
           savingRef.current = true
           setSaving(true)
@@ -76,7 +87,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
             setError('The change could not be saved. Please try again.')
           } finally { savingRef.current = false; setSaving(false) }
         }}>
-          <fieldset disabled={saving} className="stock-form__fields">
+          <fieldset disabled={saving || readingPhoto} className="stock-form__fields">
           {selection.mode === 'warehouse' && <>
             <p>Add a warehouse location to organise its brands and stock.</p>
             <div className="field"><label htmlFor={`${id}-name`}>Warehouse name</label><input id={`${id}-name`} value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} /></div>
@@ -102,6 +113,26 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
             <div className="stock-form__row"><div className="field"><label htmlFor={`${id}-quantity`}>Opening quantity</label><input id={`${id}-quantity`} type="number" min={0} max={maxStockQuantity} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></div><div className="field"><label htmlFor={`${id}-unit`}>Unit</label><select id={`${id}-unit`} value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}>{inventoryUnits.map((value) => <option key={value} value={value}>{value}</option>)}</select></div></div>
             <div className="field"><label htmlFor={`${id}-reorder`}>Low-stock threshold</label><input id={`${id}-reorder`} type="number" min={0} max={maxStockQuantity} step={1} value={reorderLevel} onChange={(event) => setReorderLevel(event.target.value)} required /></div>
           </>}
+          {(selection.mode === 'brand' || selection.mode === 'item' || photoEditor) && <div className="field stock-photo-upload">
+            {photoEditor && <p className="stock-photo-upload__name">{existingPhoto?.name}</p>}
+            <label htmlFor={`${id}-photo`}>{selection.mode === 'brand' || selection.mode === 'brand-photo' ? 'Brand picture' : 'Item picture'} {!photoEditor && <span>(optional)</span>}</label>
+            <input ref={fileInput} id={`${id}-photo`} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" aria-describedby={`${id}-photo-hint`} onChange={async (event) => {
+              const input = event.currentTarget
+              const file = input.files?.[0]
+              if (!file) return
+              setReadingPhoto(true)
+              setError('')
+              setPhoto(null)
+              setRemovePicture(false)
+              try { setPhoto(await readInventoryPhoto(file)); setRemovePicture(false) }
+              catch (failure) { input.value = ''; setError(failure instanceof Error ? failure.message : 'The picture could not be read.') }
+              finally { setReadingPhoto(false) }
+            }} />
+            <p id={`${id}-photo-hint`} className="stock-photo-upload__hint">PNG or JPEG, up to 1 MiB. {readingPhoto ? 'Reading picture...' : 'Choose a file to preview it before saving.'}</p>
+            {photo ? <div className="stock-photo-upload__preview"><img src={photo.preview} alt="Selected picture preview" /><button className="stock-button" type="button" onClick={() => { setPhoto(null); if (fileInput.current) fileInput.current.value = '' }}>Remove selected picture</button></div>
+              : photoEditor && existingPhoto?.hasProfilePhoto && !removePicture && <div className="stock-photo-upload__preview"><InventoryPhoto resource={selection.mode === 'brand-photo' ? 'brands' : 'items'} id={existingPhoto.id} hasPhoto version={existingPhoto.photoUpdatedAt} alt={existingPhoto.name} /><button className="stock-button" type="button" onClick={() => setRemovePicture(true)}>Remove saved picture</button></div>}
+            {removePicture && <p className="stock-photo-upload__hint">The saved picture will be removed when you save. <button className="stock-button" type="button" onClick={() => setRemovePicture(false)}>Undo</button></p>}
+          </div>}
           {selection.mode === 'quantity' && <>
             <p><strong>{item?.name}</strong><br />{[item?.sku, item?.location].filter(Boolean).join(' · ')}</p>
             <div className="stock-form__balance"><span>Current stock</span><strong>{expectedQuantity.toLocaleString('en-ZA')} {item?.unit}</strong></div>
@@ -111,7 +142,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
             <div className="field"><label htmlFor={`${id}-reason`}>Reason for update</label><textarea id={`${id}-reason`} placeholder="e.g. Stock received, stock issued, or recount correction" value={reason} onChange={(event) => setReason(event.target.value)} required maxLength={500} rows={3} /></div>
           </>}
           {error && <p className="stock-form__error" role="alert">{error}</p>}
-          <div className="stock-form__actions"><button className="stock-button stock-button--primary" type="submit" disabled={(selection.mode === 'brand' && !warehouseId) || (selection.mode === 'item' && !brandId)}>{selection.mode === 'quantity' ? 'Save quantity' : title}</button><button className="stock-button" type="button" onClick={onClose}>Cancel</button></div>
+          <div className="stock-form__actions"><button className="stock-button stock-button--primary" type="submit" disabled={(selection.mode === 'brand' && !warehouseId) || (selection.mode === 'item' && !brandId)}>{saving ? 'Saving...' : photoEditor ? 'Save picture' : selection.mode === 'quantity' ? 'Save quantity' : title}</button><button className="stock-button" type="button" onClick={onClose}>Cancel</button></div>
           </fieldset>
         </form>
       </div>

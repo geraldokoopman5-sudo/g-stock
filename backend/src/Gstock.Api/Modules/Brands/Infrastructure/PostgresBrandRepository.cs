@@ -12,7 +12,7 @@ internal sealed class PostgresBrandRepository(NpgsqlDataSource source)
         Guid? id, Guid? warehouseId, string? query, int limit, int offset, CancellationToken token)
     {
         const string sql = """
-            SELECT id, warehouse_id, brand_name, description, date_added, profile_photo IS NOT NULL
+            SELECT id, warehouse_id, brand_name, description, date_added, profile_photo IS NOT NULL, photo_updated_at
             FROM public.brands
             WHERE archived_at IS NULL AND (@id IS NULL OR id = @id)
               AND (@warehouse IS NULL OR warehouse_id = @warehouse)
@@ -27,7 +27,7 @@ internal sealed class PostgresBrandRepository(NpgsqlDataSource source)
         while (await reader.ReadAsync(token))
         {
             brands.Add(new Brand(reader.GetGuid(0), reader.GetGuid(1), reader.GetString(2),
-                reader.GetString(3), reader.GetDateTime(4), reader.GetBoolean(5)));
+                reader.GetString(3), reader.GetDateTime(4), reader.GetBoolean(5), reader.NullableValue<DateTime>(6)));
         }
         return brands;
     }
@@ -44,19 +44,36 @@ internal sealed class PostgresBrandRepository(NpgsqlDataSource source)
     {
         // A missing warehouse leaves the SELECT empty and inserts no brand.
         const string sql = """
-            INSERT INTO public.brands (id, warehouse_id, brand_name, description, profile_photo)
-            SELECT @id, id, @name, @description, @photo FROM public.warehouses WHERE id = @warehouse
-            RETURNING date_added;
+            INSERT INTO public.brands (id, warehouse_id, brand_name, description, profile_photo, photo_updated_at)
+            SELECT @id, id, @name, @description, @photo, CASE WHEN @photo IS NULL THEN NULL ELSE clock_timestamp() END
+            FROM public.warehouses WHERE id = @warehouse
+            RETURNING date_added, photo_updated_at;
             """;
         var id = Guid.NewGuid();
         await using var command = PostgresCommand.InTransaction(transaction, sql)
             .Bind("id", id).Bind("warehouse", warehouseId).Bind("name", name).Bind("description", description)
             .BindNullable("photo", NpgsqlDbType.Bytea, photo);
-        if (await command.ExecuteScalarAsync(token) is not DateTime added)
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token))
         {
             throw Shared.Api.ApiError.Missing("Warehouse");
         }
-        return new Brand(id, warehouseId, name, description, added, photo is not null);
+        return new Brand(id, warehouseId, name, description, reader.GetDateTime(0), photo is not null, reader.NullableValue<DateTime>(1));
+    }
+
+    public async Task<Brand> SetPhotoAsync(Guid id, byte[]? photo, DbTransaction transaction, CancellationToken token)
+    {
+        const string sql = """
+            UPDATE public.brands SET profile_photo = @photo, photo_updated_at = clock_timestamp()
+            WHERE id = @id AND archived_at IS NULL
+            RETURNING id, warehouse_id, brand_name, description, date_added, profile_photo IS NOT NULL, photo_updated_at;
+            """;
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id)
+            .BindNullable("photo", NpgsqlDbType.Bytea, photo);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token)) throw Shared.Api.ApiError.Missing("Brand");
+        return new Brand(reader.GetGuid(0), reader.GetGuid(1), reader.GetString(2), reader.GetString(3),
+            reader.GetDateTime(4), reader.GetBoolean(5), reader.NullableValue<DateTime>(6));
     }
 
     public async Task<(Guid WarehouseId, string Name)?> LockActiveAsync(

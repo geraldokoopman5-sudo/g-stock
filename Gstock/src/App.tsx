@@ -107,9 +107,10 @@ function App() {
       setInventory((current) => {
         const catalog = current.catalog
         if (action.type === 'add-warehouse') return { ...current, catalog: { ...catalog, warehouses: [...catalog.warehouses, entity as InventoryWarehouse] } }
-        if (action.type === 'add-brand') {
+        if (action.type === 'add-brand' || action.type === 'set-brand-photo') {
           const brand = entity as InventoryBrand
-          return { ...current, catalog: { ...catalog, brands: [...catalog.brands, { ...brand, initials: brand.name.slice(0, 2).toUpperCase() }] } }
+          const updated = { ...brand, initials: brand.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase() }
+          return { ...current, catalog: { ...catalog, brands: action.type === 'add-brand' ? [...catalog.brands, updated] : catalog.brands.map((entry) => entry.id === brand.id ? updated : entry) } }
         }
         const item = entity as InventoryItem
         return { ...current, catalog: { ...catalog, items: action.type === 'add-item' ? [...catalog.items, item] : catalog.items.map((entry) => entry.id === item.id ? item : entry) } }

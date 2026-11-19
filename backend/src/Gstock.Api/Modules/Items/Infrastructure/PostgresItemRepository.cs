@@ -8,7 +8,7 @@ namespace Gstock.Api.Modules.Items.Infrastructure;
 
 internal sealed class PostgresItemRepository(NpgsqlDataSource source)
 {
-    private const string Columns = "id, brand_id, warehouse_id, name, sku, quantity, unit, added_at, location, reorder_level";
+    private const string Columns = "id, brand_id, warehouse_id, name, sku, quantity, unit, added_at, location, reorder_level, profile_photo IS NOT NULL, photo_updated_at";
 
     public async Task<IReadOnlyList<InventoryItems>> ReadAsync(Guid? id, Guid? warehouseId, Guid? brandId,
         string? query, int limit, int offset, CancellationToken token)
@@ -53,24 +53,44 @@ internal sealed class PostgresItemRepository(NpgsqlDataSource source)
     }
 
     public async Task<InventoryItems> InsertAsync(Guid brandId, Guid warehouseId, string name, string? sku,
-        int quantity, string unit, string location, int reorderLevel, DbTransaction transaction, CancellationToken token)
+        int quantity, string unit, string location, int reorderLevel, byte[]? photo, DbTransaction transaction, CancellationToken token)
     {
         var id = Guid.NewGuid();
         sku ??= $"GST-{id:N}".ToUpperInvariant();
         const string sql = $"""
-            INSERT INTO public.inventory_items (id, brand_id, warehouse_id, name, sku, quantity, unit, location, reorder_level)
-            VALUES (@id, @brand, @warehouse, @name, @sku, @quantity, @unit, @location, @reorder)
+            INSERT INTO public.inventory_items (id, brand_id, warehouse_id, name, sku, quantity, unit, location, reorder_level, profile_photo, photo_updated_at)
+            VALUES (@id, @brand, @warehouse, @name, @sku, @quantity, @unit, @location, @reorder, @photo, CASE WHEN @photo IS NULL THEN NULL ELSE clock_timestamp() END)
             RETURNING {Columns};
             """;
         await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id)
             .Bind("brand", brandId).Bind("warehouse", warehouseId).Bind("name", name)
             .Bind("sku", sku).Bind("quantity", quantity).Bind("unit", unit)
-            .Bind("location", location).Bind("reorder", reorderLevel);
+            .Bind("location", location).Bind("reorder", reorderLevel).BindNullable("photo", NpgsqlDbType.Bytea, photo);
         await using var reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token))
         {
             throw new InvalidOperationException("PostgreSQL did not return the inserted item.");
         }
+        return Read(reader);
+    }
+
+    public async Task<byte[]?> ReadPhotoAsync(Guid id, CancellationToken token)
+    {
+        await using var command = source.CreateCommand("SELECT profile_photo FROM public.inventory_items WHERE id = @id AND archived_at IS NULL;")
+            .Bind("id", id);
+        return await command.ExecuteScalarAsync(token) as byte[];
+    }
+
+    public async Task<InventoryItems> SetPhotoAsync(Guid id, byte[]? photo, DbTransaction transaction, CancellationToken token)
+    {
+        const string sql = $"""
+            UPDATE public.inventory_items SET profile_photo = @photo, photo_updated_at = clock_timestamp()
+            WHERE id = @id AND archived_at IS NULL RETURNING {Columns};
+            """;
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id)
+            .BindNullable("photo", NpgsqlDbType.Bytea, photo);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token)) throw Shared.Api.ApiError.Missing("Item");
         return Read(reader);
     }
 
@@ -91,5 +111,5 @@ internal sealed class PostgresItemRepository(NpgsqlDataSource source)
     private static InventoryItems Read(NpgsqlDataReader reader) => new(
         reader.GetGuid(0), reader.GetGuid(1), reader.GetGuid(2), reader.GetString(3),
         reader.NullableText(4), reader.GetInt32(5), reader.GetString(6), reader.GetDateTime(7),
-        reader.GetString(8), reader.GetInt32(9));
+        reader.GetString(8), reader.GetInt32(9), reader.GetBoolean(10), reader.NullableValue<DateTime>(11));
 }

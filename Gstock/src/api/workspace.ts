@@ -85,6 +85,8 @@ export async function saveInventory(action: InventoryAction) {
     case 'add-warehouse': return api.request<InventoryWarehouse>('/warehouses', jsonBody(action.input))
     case 'add-brand': return api.request<InventoryBrand>('/brands', jsonBody(action.input))
     case 'add-item': return api.request<InventoryItem>('/items', jsonBody(action.input))
+    case 'set-brand-photo': return api.request<InventoryBrand>(`/brands/${encodeURIComponent(action.brandId)}/photo`, { ...jsonBody({ profilePhoto: action.profilePhoto }), method: 'PUT' })
+    case 'set-item-photo': return api.request<InventoryItem>(`/items/${encodeURIComponent(action.itemId)}/photo`, { ...jsonBody({ profilePhoto: action.profilePhoto }), method: 'PUT' })
     case 'adjust-quantity': return api.request<InventoryItem>(`/items/${encodeURIComponent(action.itemId)}/adjustments`,
       jsonBody({ mode: action.mode, quantity: action.quantity, expectedQuantity: action.expectedQuantity, reason: action.reason }))
   }

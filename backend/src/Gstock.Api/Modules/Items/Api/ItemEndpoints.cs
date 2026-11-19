@@ -24,6 +24,12 @@ internal static class ItemEndpoints
             var item = await items.CreateAsync(input, user.EmployeeId(), token);
             return Results.Created($"/api/v1/items/{item.Id}", item);
         });
+        routes.MapGet("/{id:guid}/photo", async (Guid id, HttpContext context,
+            [FromServices] PostgresItemRepository items, CancellationToken token) =>
+            InventoryPhoto.File(await items.ReadPhotoAsync(id, token), context));
+        routes.MapPut("/{id:guid}/photo", async (Guid id, SetInventoryPhotoInput input, ClaimsPrincipal user,
+            [FromServices] ItemService items, CancellationToken token) =>
+            Results.Ok(await items.SetPhotoAsync(id, input, user.EmployeeId(), token)));
         routes.MapPost("/{id:guid}/adjustments", async (Guid id, AdjustStockInput input, ClaimsPrincipal user,
             [FromServices] ItemService items, CancellationToken token) =>
             Results.Ok(await items.AdjustAsync(id, input, user.EmployeeId(), token)));

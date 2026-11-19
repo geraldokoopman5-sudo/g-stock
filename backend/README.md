@@ -23,6 +23,8 @@ The migration command applies pending SQL files from `backend/migrations` in fil
 
 The integrated frontend requires `003_frontend_fields.sql`. This additive migration persists employee departments, warehouse contacts and notes, item storage locations, and low-stock thresholds. Existing records receive empty text fields and a zero threshold. Apply it before running the updated API.
 
+Picture uploads also require `004_inventory_photos.sql`. It adds optional item picture bytes and picture-update timestamps for items and brands, reusing the existing brand `profile_photo` field. The normal migration command above applies both migrations. PNG and JPEG uploads are limited to 1 MiB. `profilePhoto` is a base64 string in create and `PUT /api/v1/{brands|items}/{id}/photo` requests; null removes a picture on PUT. Stock managers manage brand pictures, normal employees manage item pictures, and all signed-in accounts can read them through the corresponding GET endpoint.
+
 ## Run the integrated frontend
 
 Start the API with the `http` launch profile (`http://localhost:5268`), then run `npm.cmd ci` and `npm.cmd run dev` from `Gstock`. Open Vite's **localhost** URL. Its `/api` proxy preserves the browser origin, allowing the existing same-origin and CSRF protections to work without enabling CORS. See the [workspace README](../Gstock/README.md) for role permissions, session behavior, and deployment setup.

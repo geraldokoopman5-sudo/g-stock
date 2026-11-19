@@ -18,11 +18,7 @@ internal sealed class BrandService(
     {
         var name = ApiRequests.RequiredText(input.Name, "name", 100);
         var description = ApiRequests.Text(input.Description ?? "", "description", 250);
-        var photo = input.ProfilePhoto;
-        if (photo is not null && (photo.Length > 1_048_576 || GetPhotoType(photo) is null))
-        {
-            throw ApiError.Invalid("profilePhoto", "Supply a PNG or JPEG up to 1 MiB.");
-        }
+        var photo = InventoryPhoto.Validate(input.ProfilePhoto);
 
         return database.RunAsync(async (transaction, ct) =>
         {
@@ -48,12 +44,14 @@ internal sealed class BrandService(
             return true;
         }, token);
 
-    public static string? GetPhotoType(ReadOnlySpan<byte> photo)
+    public Task<Brand> SetPhotoAsync(Guid id, SetInventoryPhotoInput input, Guid actorId, CancellationToken token)
     {
-        if (photo.StartsWith(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }))
+        var photo = InventoryPhoto.Validate(input.ProfilePhoto);
+        return database.RunAsync(async (transaction, ct) =>
         {
-            return "image/png";
-        }
-        return photo.StartsWith(new byte[] { 255, 216, 255 }) ? "image/jpeg" : null;
+            await employees.RequireRoleAsync(actorId, AccountRoles.StockManager, transaction, ct);
+            if (await brands.LockActiveAsync(id, transaction, ct) is null) throw ApiError.Missing("Brand");
+            return await brands.SetPhotoAsync(id, photo, transaction, ct);
+        }, token);
     }
 }

@@ -16,7 +16,7 @@ export function createApiClient(fetcher: typeof fetch = (...args) => fetch(...ar
   let refreshPending: Promise<boolean> | null = null
   let onSessionExpired: (() => void) | undefined
 
-  async function send<T>(path: string, options: RequestInit = {}): Promise<T> {
+  async function send<T>(path: string, options: RequestInit = {}, responseType: 'json' | 'blob' = 'json'): Promise<T> {
     let response: Response
     try {
       response = await fetcher(`${root}${path}`, { ...options, credentials: 'same-origin' })
@@ -32,7 +32,7 @@ export function createApiClient(fetcher: typeof fetch = (...args) => fetch(...ar
         429: 'Too many requests. Please wait a moment and try again.',
       }[response.status] ?? 'The request could not be completed. Please try again.'))
     }
-    return response.status === 204 ? undefined as T : response.json()
+    return response.status === 204 ? undefined as T : responseType === 'blob' ? response.blob() as Promise<T> : response.json()
   }
 
   async function csrf() {
@@ -65,12 +65,12 @@ export function createApiClient(fetcher: typeof fetch = (...args) => fetch(...ar
     return refreshPending
   }
 
-  async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  async function request<T>(path: string, options: RequestInit = {}, responseType: 'json' | 'blob' = 'json'): Promise<T> {
     const attemptedToken = accessToken
     const perform = () => {
       const headers = new Headers(options.headers)
       if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
-      return send<T>(path, { ...options, headers })
+      return send<T>(path, { ...options, headers }, responseType)
     }
     try {
       return await perform()
@@ -94,6 +94,7 @@ export function createApiClient(fetcher: typeof fetch = (...args) => fetch(...ar
 
   return {
     request,
+    requestBlob: (path: string, options?: RequestInit) => request<Blob>(path, options, 'blob'),
     restore: refresh,
     onSessionExpired(callback: () => void) { onSessionExpired = callback },
     async login(email: string, password: string, rememberMe: boolean) {

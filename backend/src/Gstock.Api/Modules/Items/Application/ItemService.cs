@@ -12,7 +12,7 @@ using Gstock.Contracts;
 namespace Gstock.Api.Modules.Items.Application;
 
 internal sealed record CreateItemInput(Guid BrandId, string? Name, string? Sku, int? Quantity, string? Unit,
-    Guid? WarehouseId, string? Location = null, int? ReorderLevel = null);
+    Guid? WarehouseId, string? Location = null, int? ReorderLevel = null, byte[]? ProfilePhoto = null);
 internal sealed record AdjustStockInput(string? Mode, int? Quantity, int? ExpectedQuantity, string? Reason);
 
 internal sealed class ItemService(
@@ -29,6 +29,7 @@ internal sealed class ItemService(
         var quantity = Quantity(input.Quantity, "quantity");
         var location = ApiRequests.Text(input.Location ?? "", "location", 80);
         var reorderLevel = Quantity(input.ReorderLevel ?? 0, "reorderLevel");
+        var photo = InventoryPhoto.Validate(input.ProfilePhoto);
         var unit = input.Unit?.Trim().ToLowerInvariant();
         if (unit is not ("units" or "boxes" or "rolls" or "cases" or "pairs"))
         {
@@ -44,7 +45,7 @@ internal sealed class ItemService(
                 throw ApiError.Invalid("warehouseId", "The item must belong to its brand's warehouse.");
             }
             var item = await items.InsertAsync(input.BrandId, brand.WarehouseId, name, sku, quantity, unit,
-                location, reorderLevel, transaction, ct);
+                location, reorderLevel, photo, transaction, ct);
             await activity.AddAsync(Event("item-created", item, actor), transaction, ct);
             return item;
         }, token);
@@ -85,6 +86,17 @@ internal sealed class ItemService(
             var adjusted = item with { Quantity = updated };
             await activity.AddAsync(Event("quantity-updated", adjusted, actor, item.Quantity, reason), transaction, ct);
             return adjusted;
+        }, token);
+    }
+
+    public Task<InventoryItems> SetPhotoAsync(Guid id, SetInventoryPhotoInput input, Guid actorId, CancellationToken token)
+    {
+        var photo = InventoryPhoto.Validate(input.ProfilePhoto);
+        return database.RunAsync(async (transaction, ct) =>
+        {
+            await employees.RequireRoleAsync(actorId, AccountRoles.Nemployee, transaction, ct);
+            await LockItemAsync(id, transaction, ct);
+            return await items.SetPhotoAsync(id, photo, transaction, ct);
         }, token);
     }
 

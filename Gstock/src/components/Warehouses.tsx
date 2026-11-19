@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { InventoryActivity as Activity, InventoryCatalog, SaveInventoryAction } from '../types/inventory'
 import { getBrandGroups } from '../data/inventory'
 import InventoryEditor from './InventoryEditor'
+import InventoryPhoto from './InventoryPhoto'
 import type { InventoryEditorSelection } from './InventoryEditor'
 import InventoryActivity from './InventoryActivity'
 import WorkspaceIcon from './WorkspaceIcon'
@@ -46,7 +47,7 @@ export default function Warehouses({ catalog, activity, selectedId, onAction, pe
         {warehouse.streetName && <p className="warehouses__notes">{[warehouse.streetName, warehouse.suburbName, warehouse.city, warehouse.province, String(warehouse.postalCode ?? '').padStart(4, '0')].filter(Boolean).join(', ')}</p>}
         {warehouse.notes && <p className="warehouses__notes">{warehouse.notes}</p>}
         <h2 className="warehouses__section-title">Warehouse brands</h2>
-        {groups.length ? <ul className="warehouses__brands">{brandPages.items.map(({ brand, items, needsAttention }) => <li key={brand.id}><a href={`#inventory/${encodeURIComponent(brand.id)}`}><span className="warehouses__monogram" aria-hidden="true">{brand.initials}</span><span><strong>{brand.name}</strong><span>{items.length} item lines{needsAttention ? ` · ${needsAttention} need attention` : ''}</span></span><WorkspaceIcon name="arrow" size={18} /></a></li>)}</ul> : <div className="warehouses__empty"><WorkspaceIcon name="inventory" size={32} /><h2>No brands for this warehouse yet.</h2><p>Add a brand, then add the stock your warehouse holds for it.</p><button className="stock-button" type="button" disabled={permissions?.canManageBrands === false} onClick={() => setEditor({ mode: 'brand', warehouseId: warehouse.id })}>Add first brand</button></div>}
+        {groups.length ? <ul className="warehouses__brands">{brandPages.items.map(({ brand, items, needsAttention }) => <li key={brand.id}><a href={`#inventory/${encodeURIComponent(brand.id)}`}><InventoryPhoto resource="brands" id={brand.id} hasPhoto={brand.hasProfilePhoto} version={brand.photoUpdatedAt} alt={`${brand.name} brand picture`} className="warehouses__monogram" fallback={<span aria-hidden="true">{brand.initials}</span>} /><span><strong>{brand.name}</strong><span>{items.length} item lines{needsAttention ? ` · ${needsAttention} need attention` : ''}</span></span><WorkspaceIcon name="arrow" size={18} /></a></li>)}</ul> : <div className="warehouses__empty"><WorkspaceIcon name="inventory" size={32} /><h2>No brands for this warehouse yet.</h2><p>Add a brand, then add the stock your warehouse holds for it.</p><button className="stock-button" type="button" disabled={permissions?.canManageBrands === false} onClick={() => setEditor({ mode: 'brand', warehouseId: warehouse.id })}>Add first brand</button></div>}
         {groups.length > 0 && <ListPagination {...brandPages} label="brands" href={`#warehouses/${encodeURIComponent(warehouse.id)}`} />}
       </> : <>
         <div className="warehouses__search"><label htmlFor="warehouse-search">Search warehouses</label><input id="warehouse-search" type="search" value={query} placeholder="Warehouse name, contact, or email" onChange={(event) => setQuery(event.target.value)} /><p role="status">{warehouses.length} {warehouses.length === 1 ? 'warehouse' : 'warehouses'}</p></div>

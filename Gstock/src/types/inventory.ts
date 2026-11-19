@@ -17,6 +17,8 @@ export interface InventoryBrand {
   name: string
   description: string
   initials: string
+  hasProfilePhoto?: boolean
+  photoUpdatedAt?: string | null
 }
 
 export interface InventoryItem {
@@ -28,6 +30,8 @@ export interface InventoryItem {
   quantity: number
   unit: 'units' | 'boxes' | 'rolls' | 'cases' | 'pairs'
   reorderLevel: number
+  hasProfilePhoto?: boolean
+  photoUpdatedAt?: string | null
 }
 
 export interface InventoryCatalog {
@@ -73,13 +77,15 @@ export interface InventoryState {
 }
 
 export type NewWarehouse = Omit<InventoryWarehouse, 'id'>
-export type NewBrand = Pick<InventoryBrand, 'warehouseId' | 'name' | 'description'>
-export type NewStockItem = Omit<InventoryItem, 'id'>
+export type NewBrand = Pick<InventoryBrand, 'warehouseId' | 'name' | 'description'> & { profilePhoto?: string }
+export type NewStockItem = Omit<InventoryItem, 'id' | 'hasProfilePhoto' | 'photoUpdatedAt'> & { profilePhoto?: string }
 export type QuantityMode = 'add' | 'remove' | 'set'
 export type InventoryAction =
   | { type: 'add-warehouse'; input: NewWarehouse }
   | { type: 'add-brand'; input: NewBrand }
   | { type: 'add-item'; input: NewStockItem }
+  | { type: 'set-brand-photo'; brandId: string; profilePhoto: string | null }
+  | { type: 'set-item-photo'; itemId: string; profilePhoto: string | null }
   | { type: 'adjust-quantity'; itemId: string; mode: QuantityMode; quantity: number; expectedQuantity: number; reason: string }
 
 export type InventorySaveResult = { ok: true; entityId: string } | { ok: false; error: string }

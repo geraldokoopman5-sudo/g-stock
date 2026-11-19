@@ -21,11 +21,11 @@ internal static class BrandEndpoints
         routes.MapGet("/{id:guid}/photo", async (
             Guid id, HttpContext context, [FromServices] PostgresBrandRepository brands, CancellationToken token) =>
         {
-            var photo = await brands.ReadPhotoAsync(id, token) ?? throw ApiError.Missing("Brand photo");
-            var type = BrandService.GetPhotoType(photo) ?? throw ApiError.Missing("Brand photo");
-            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-            return Results.File(photo, type);
+            return InventoryPhoto.File(await brands.ReadPhotoAsync(id, token), context);
         });
+        routes.MapPut("/{id:guid}/photo", async (Guid id, SetInventoryPhotoInput input, ClaimsPrincipal user,
+            [FromServices] BrandService brands, CancellationToken token) =>
+            Results.Ok(await brands.SetPhotoAsync(id, input, user.EmployeeId(), token)));
         routes.MapPost("", async (CreateBrandInput input, ClaimsPrincipal user,
             [FromServices] BrandService brands, CancellationToken token) =>
         {
