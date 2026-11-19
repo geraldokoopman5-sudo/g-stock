@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { EmployeeAccount, EmployeeProfile, EmployeeUpdate } from '../types/employees'
+import type { EmployeeAccount, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import EmployeeCard from './EmployeeCard'
 import EmployeeAccounts from './EmployeeAccounts'
 import Inventory from './Inventory'
 import Warehouses from './Warehouses'
 import ThemeToggle from './ThemeToggle'
+import StockAlerts from './StockAlerts'
+import { getStockAlerts } from '../data/inventory'
 import type { InventoryState, SaveInventoryAction } from '../types/inventory'
 import WorkspaceIcon from './WorkspaceIcon'
 import type { WorkspaceIconName } from './WorkspaceIcon'
@@ -32,23 +34,26 @@ interface WorkspaceProps {
   permissions?: WorkspacePermissions
   accounts: EmployeeAccount[]
   onSaveEmployee: (accountId: string, details: EmployeeUpdate) => Promise<string | null>
+  onCreateEmployee?: (details: EmployeeCreate) => Promise<string | null>
   inventory: InventoryState
   onInventoryAction: SaveInventoryAction
+  onRefreshInventory?: () => Promise<void>
   onOpenEmployee?: (id: string) => Promise<void>
   signingOut?: boolean
   active: boolean
   onSignOut: () => void
 }
 
-export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, inventory, onInventoryAction, onOpenEmployee, active, onSignOut, signingOut }: WorkspaceProps) {
+export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, onCreateEmployee, inventory, onInventoryAction, onRefreshInventory, onOpenEmployee, active, onSignOut, signingOut }: WorkspaceProps) {
   const permissions = grantedPermissions ?? {
-    canCreateWarehouse: employee.status !== 'InActive',
+    canCreateWarehouse: employee.status !== 'InActive' && employee.accountRole !== 'StaffManager',
     canManageBrands: !employee.accountRole || employee.accountRole === 'StockManager',
     canManageItems: !employee.accountRole || employee.accountRole === 'Nemployee',
     canManageEmployees: employee.accountRole === 'StaffManager',
   }
   const route = useSyncExternalStore(subscribeToPage, currentPage, () => '#home')
-  const [routePage, selectedId] = route.slice(1).split('/')
+  const [routePage, selectedId, selectedItemId] = route.slice(1).split('/')
+  const alerts = getStockAlerts(inventory.catalog)
   const page = pages.find((entry) => entry.id === routePage) ?? pages[0]
   const pageId = page.id
   const [navigationOpen, setNavigationOpen] = useState(false)
@@ -60,9 +65,9 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
   useEffect(() => {
     if (active) {
       headingRef.current?.focus()
-      window.scrollTo(0, 0)
+      if (pageId !== 'inventory' || !selectedItemId) window.scrollTo(0, 0)
     }
-  }, [active, route])
+  }, [active, route, pageId, selectedItemId])
 
   useEffect(() => {
     if (!navigationOpen) return
@@ -108,9 +113,9 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
             </section>
           </div>
         ) : pageId === 'employees' ? (
-          <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} onOpen={onOpenEmployee} />
+          <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} onCreate={onCreateEmployee} onOpen={onOpenEmployee} />
         ) : pageId === 'inventory' ? (
-          <Inventory selectedBrandId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} permissions={permissions} />
+          <Inventory selectedBrandId={selectedId} selectedItemId={selectedItemId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} permissions={permissions} />
         ) : (
           <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} permissions={permissions} />
         )}
@@ -134,11 +139,14 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
                 </li>
               ))}
             </ul>
+            <StockAlerts alerts={alerts} onOpenItem={() => { setNavigationOpen(false); triggerRef.current?.focus() }} onRefresh={onRefreshInventory} />
             <button type="button" className="workspace-navigation__signout" onClick={onSignOut} disabled={signingOut}><WorkspaceIcon name="logout" />{signingOut ? 'Logging out...' : 'Log out'}</button>
           </nav>
         )}
-        <button ref={triggerRef} className={`workspace-navigation__trigger${navigationOpen ? ' workspace-navigation__trigger--open' : ''}`} aria-expanded={navigationOpen} aria-controls="workspace-navigation" type="button" onClick={() => setNavigationOpen(!navigationOpen)}>
+        <span className="workspace-navigation__sr-only" role="status">{alerts.length ? `${alerts.length} stock ${alerts.length === 1 ? 'item needs' : 'items need'} attention.` : 'No stock alerts.'}</span>
+        <button ref={triggerRef} className={`workspace-navigation__trigger${navigationOpen ? ' workspace-navigation__trigger--open' : ''}`} aria-label={`${navigationOpen ? 'Close Explore' : 'Explore'}${alerts.length ? `, ${alerts.length} stock ${alerts.length === 1 ? 'alert' : 'alerts'}` : ''}`} aria-expanded={navigationOpen} aria-controls="workspace-navigation" type="button" onClick={() => setNavigationOpen(!navigationOpen)}>
           <WorkspaceIcon name="grid" /><span>{navigationOpen ? 'Close' : 'Explore'}</span>
+          {alerts.length > 0 && <span className="workspace-navigation__alert-count" aria-hidden="true">{alerts.length > 99 ? '99+' : alerts.length}</span>}
         </button>
       </div>
     </div>

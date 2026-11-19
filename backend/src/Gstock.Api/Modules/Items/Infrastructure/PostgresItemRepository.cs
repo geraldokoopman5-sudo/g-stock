@@ -55,14 +55,16 @@ internal sealed class PostgresItemRepository(NpgsqlDataSource source)
     public async Task<InventoryItems> InsertAsync(Guid brandId, Guid warehouseId, string name, string? sku,
         int quantity, string unit, string location, int reorderLevel, DbTransaction transaction, CancellationToken token)
     {
+        var id = Guid.NewGuid();
+        sku ??= $"GST-{id:N}".ToUpperInvariant();
         const string sql = $"""
             INSERT INTO public.inventory_items (id, brand_id, warehouse_id, name, sku, quantity, unit, location, reorder_level)
             VALUES (@id, @brand, @warehouse, @name, @sku, @quantity, @unit, @location, @reorder)
             RETURNING {Columns};
             """;
-        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", Guid.NewGuid())
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id)
             .Bind("brand", brandId).Bind("warehouse", warehouseId).Bind("name", name)
-            .BindNullable("sku", NpgsqlDbType.Text, sku).Bind("quantity", quantity).Bind("unit", unit)
+            .Bind("sku", sku).Bind("quantity", quantity).Bind("unit", unit)
             .Bind("location", location).Bind("reorder", reorderLevel);
         await using var reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token))

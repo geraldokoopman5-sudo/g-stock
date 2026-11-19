@@ -182,3 +182,30 @@ test('API account roles restrict editing to staff managers targeting normal empl
   assert.ok(!render(staff, manager.id).includes('>Edit</button>'))
   assert.ok(!render(staff).includes('during this preview'))
 })
+
+test('only active staff managers can open account creation', () => {
+  const { accounts, manager, employee } = scenario()
+  const render = (viewer) => renderToStaticMarkup(React.createElement(EmployeeAccounts, {
+    accounts, viewer, onSave: async () => null, onCreate: async () => null,
+  }))
+  const staff = { ...manager, accountRole: 'StaffManager', status: 'Active' }
+  assert.ok(render(staff).includes('>Add employee account</button>'))
+  for (const viewer of [employee, { ...staff, status: 'InActive' }, { ...staff, accountRole: 'StockManager' }, { ...staff, accountRole: 'Nemployee' }]) {
+    assert.ok(!render(viewer).includes('>Add employee account</button>'))
+  }
+})
+
+test('account creation form offers every account type and requires confirmed new credentials', async () => {
+  const CreateEmployeeDialog = (await server.ssrLoadModule('/src/components/CreateEmployeeDialog.tsx')).default
+  const markup = renderToStaticMarkup(React.createElement(CreateEmployeeDialog, {
+    onSave: async () => null, onClose() {}, onCreated() {},
+  }))
+  for (const role of ['Nemployee', 'StockManager', 'StaffManager']) assert.ok(markup.includes(`value="${role}"`))
+  const input = (name) => markup.match(new RegExp(`<input[^>]*name="${name}"[^>]*>`))?.[0] ?? ''
+  for (const name of ['password', 'confirmPassword']) {
+    assert.ok(input(name).includes('required=""'))
+    assert.ok(input(name).includes('minLength="8"'))
+    assert.ok(input(name).includes('autoComplete="new-password"'))
+  }
+  assert.ok(!input('department').includes('required'))
+})

@@ -13,12 +13,13 @@ import './Inventory.css'
 interface InventoryProps {
   permissions?: WorkspacePermissions
   selectedBrandId?: string
+  selectedItemId?: string
   catalog?: InventoryCatalog
   activity?: readonly Activity[]
   onAction?: SaveInventoryAction
 }
 
-export default function Inventory({ selectedBrandId, catalog = sampleInventory, activity = [], onAction, permissions }: InventoryProps) {
+export default function Inventory({ selectedBrandId, selectedItemId, catalog = sampleInventory, activity = [], onAction, permissions }: InventoryProps) {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<StockFilter>('all')
   const [warehouseId, setWarehouseId] = useState('all')
@@ -28,6 +29,8 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
   const brand = catalog.brands.find((entry) => encodeURIComponent(entry.id) === selectedBrandId)
   const warehouse = catalog.warehouses.find((entry) => entry.id === brand?.warehouseId)
   const allBrandItems = brand ? catalog.items.filter((item) => item.brandId === brand.id) : []
+  const selectedItem = allBrandItems.find((item) => encodeURIComponent(item.id) === selectedItemId)
+  const selectedItemHeading = useRef<HTMLHeadingElement>(null)
   const summary = getInventorySummary(brand ? { ...catalog, brands: [brand], items: allBrandItems } : catalog)
   const groups = getBrandGroups(catalog, { query, status, warehouseId })
   const items = brand ? getBrandItems(catalog, brand.id, { query, status }) : []
@@ -35,7 +38,10 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
   const itemPages = usePagination(items, JSON.stringify([selectedBrandId, query.trim().toLowerCase(), status]))
   const hasFilters = Boolean(query.trim()) || status !== 'all' || (!brand && warehouseId !== 'all')
 
-  useEffect(() => { heading.current?.focus() }, [selectedBrandId])
+  useEffect(() => {
+    if (selectedItemId && selectedItemHeading.current) selectedItemHeading.current.focus()
+    else heading.current?.focus()
+  }, [selectedBrandId, selectedItemId])
 
   function clearFilters() { setQuery(''); setStatus('all'); setWarehouseId('all') }
 
@@ -69,6 +75,25 @@ export default function Inventory({ selectedBrandId, catalog = sampleInventory, 
         {!brand && <a className="stock-button" href="#warehouses">View warehouses</a>}
       </div>}
       {feedback && <p className="stock-feedback" role="status">{feedback}</p>}
+
+      {selectedItem && <section className="inventory__selected-item" aria-labelledby="selected-item-heading">
+        <div className="inventory__selected-item-heading">
+          <div><p className="eyebrow">SELECTED STOCK ITEM</p><h2 id="selected-item-heading" ref={selectedItemHeading} tabIndex={-1}>{selectedItem.name}</h2>{selectedItem.sku && <p className="inventory__selected-sku">{selectedItem.sku}</p>}</div>
+          <span className={`inventory__stock inventory__stock--${getStockStatus(selectedItem)}`}>{stockStatusLabels[getStockStatus(selectedItem)]}</span>
+        </div>
+        <dl>
+          <div><dt>Warehouse</dt><dd>{warehouse?.name ?? 'Not assigned'}</dd></div>
+          <div><dt>Storage location</dt><dd>{selectedItem.location || 'Not recorded'}</dd></div>
+          <div><dt>On hand</dt><dd>{selectedItem.quantity.toLocaleString('en-ZA')} {selectedItem.unit}</dd></div>
+          <div><dt>Low-stock threshold</dt><dd>{selectedItem.reorderLevel.toLocaleString('en-ZA')} {selectedItem.unit}</dd></div>
+        </dl>
+        {getStockStatus(selectedItem) !== 'in-stock' && <p className="inventory__selected-hint">Add stock above {selectedItem.reorderLevel.toLocaleString('en-ZA')} {selectedItem.unit} to clear this alert.</p>}
+        <div className="stock-actions">
+          {onAction && permissions?.canManageItems !== false && <button className="stock-button stock-button--primary" type="button" onClick={() => setEditor({ mode: 'quantity', itemId: selectedItem.id })}>Update quantity</button>}
+          <a className="stock-button" href={`#inventory/${encodeURIComponent(selectedItem.brandId)}`}>Back to brand items</a>
+        </div>
+      </section>}
+      {brand && selectedItemId && !selectedItem && <p className="stock-feedback" role="status">This stock item is no longer available. The brand's current items are listed below.</p>}
 
       <dl className="inventory__overview" aria-label={brand ? 'Brand stock overview' : 'Warehouse stock overview'}>
         <div><dt>{brand ? 'Storage locations' : 'Brands'}</dt><dd>{brand ? new Set(allBrandItems.map((item) => item.location)).size : summary.brands}</dd></div>

@@ -6,6 +6,16 @@
 .inventory__intro > span { display: block; margin-bottom: 4px; color: var(--color-text); }
 .inventory__intro a { color: var(--color-accent-text); text-underline-offset: 3px; }
 .inventory__actions { margin-top: 24px; }
+.inventory__selected-item { margin-top: 28px; padding: clamp(20px, 4vw, 28px); border: 1px solid var(--color-accent); border-radius: 16px; background: var(--color-surface); }
+.inventory__selected-item-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 16px; }
+.inventory__selected-item-heading > div { min-width: 0; }
+.inventory__selected-item .eyebrow { margin-bottom: 10px; color: var(--color-accent-text); font-size: 12px; }
+.inventory__selected-item h2 { color: var(--color-text); font-size: 24px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; scroll-margin-top: 24px; }
+.inventory__selected-sku { margin-top: 8px; color: var(--color-text-secondary); font: 14px/1.6 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+.inventory__selected-item dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; margin: 24px 0; }
+.inventory__selected-item dt { margin-bottom: 6px; color: var(--color-text-secondary); font-size: 14px; }
+.inventory__selected-item dd { margin: 0; color: var(--color-text); font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.inventory__selected-hint { margin: 0 0 20px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.6; }
 .inventory__sample { display: inline-flex; align-items: center; gap: 8px; flex: none; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 20px; color: var(--color-text-secondary); font-size: 10px; }
 .inventory__sample > span { width: 5px; height: 5px; border-radius: 50%; background: var(--color-accent); }
 .inventory__overview { display: grid; grid-template-columns: repeat(3, 1fr); margin: 36px 0 48px; padding: 24px 0; border-block: 1px solid rgb(var(--color-mist-blue-rgb) / 0.502); }
@@ -84,6 +94,7 @@
   .inventory__section-heading > span { font-size: 9px; }
 }
 @media (max-width: 480px) {
+  .inventory__selected-item dl { grid-template-columns: 1fr; }
   .inventory__brands { grid-template-columns: 1fr; }
   .inventory-brand { min-height: 300px; }
   .inventory__overview > div { padding: 0 10px; }

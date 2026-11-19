@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import type { EmployeeAccount, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
+import type { EmployeeAccount, EmployeeCreate, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import { canEditEmployeeAccounts, employeeFieldLabels, employeeFields, restrictEmployeeEditingToManagers } from '../data/employeeAccounts'
 import EmployeeCard from './EmployeeCard'
+import CreateEmployeeDialog from './CreateEmployeeDialog'
 import { errorMessage } from '../api/client'
 import WorkspaceIcon from './WorkspaceIcon'
 import ListPagination from './ListPagination'
@@ -14,6 +15,7 @@ interface EmployeeAccountsProps {
   viewer: EmployeeProfile
   selectedId?: string
   onSave: (accountId: string, details: EmployeeUpdate) => Promise<string | null>
+  onCreate?: (details: EmployeeCreate) => Promise<string | null>
 }
 
 const dateFormat = new Intl.DateTimeFormat('en-ZA', {
@@ -146,8 +148,12 @@ function EmployeeAccountDetail({ account, viewer, onSave }: {
   )
 }
 
-export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave, onOpen }: EmployeeAccountsProps) {
+export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave, onCreate, onOpen }: EmployeeAccountsProps) {
   const [search, setSearch] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createdName, setCreatedName] = useState('')
+  const createButton = useRef<HTMLButtonElement>(null)
+  const canCreate = viewer.accountRole === 'StaffManager' && viewer.status === 'Active' && Boolean(onCreate)
   const [historyResult, setHistoryResult] = useState({ id: '', error: '' })
   const historyError = historyResult.id === selectedId ? historyResult.error : ''
   const loadingHistory = Boolean(onOpen && selectedId && historyResult.id !== selectedId)
@@ -180,8 +186,12 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
   return (
     <section className="employee-accounts" aria-labelledby="employee-accounts-heading">
       <p className="eyebrow">G-STOCK / YOUR PEOPLE</p>
-      <h1 id="employee-accounts-heading" ref={heading} tabIndex={-1}>Employee accounts</h1>
+      <div className="employee-accounts__heading">
+        <h1 id="employee-accounts-heading" ref={heading} tabIndex={-1}>Employee accounts</h1>
+        {canCreate && <button ref={createButton} className="account-button account-button--primary" type="button" onClick={() => { setCreating(true); setCreatedName('') }}>Add employee account</button>}
+      </div>
       <p className="workspace__description">Find an employee and open their card.</p>
+      {createdName && <p className="employee-accounts__saved" role="status">Account created for {createdName}. They can now sign in.</p>}
       <p className="employee-accounts__viewer">Viewing as <strong>{viewer.fullName}</strong> · {viewer.role}</p>
       {!viewer.accountRole && !restrictEmployeeEditingToManagers && <p className="employee-accounts__viewer">All employee accounts can edit details and passwords during this preview.</p>}
       <div className="employee-accounts__toolbar">
@@ -203,6 +213,13 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
       </ul>
       {!filtered.length && <p className="employee-accounts__empty">No employee accounts match your search.</p>}
       <ListPagination {...accountPages} label="employee accounts" href="#employees" />
+      {creating && canCreate && onCreate && <CreateEmployeeDialog onSave={onCreate} onClose={() => { setCreating(false); createButton.current?.focus() }} onCreated={(name) => {
+        setCreating(false)
+        setCreatedName(name)
+        setSearch('')
+        accountPages.onPageChange(1)
+        createButton.current?.focus()
+      }} />}
     </section>
   )
 }

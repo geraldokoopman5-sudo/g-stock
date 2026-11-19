@@ -31,7 +31,7 @@ internal static class AuthSessionEndpoints
                 profile,
                 permissions = new
                 {
-                    canCreateWarehouse = profile.Status == AccountStatus.Active,
+                    canCreateWarehouse = profile.Status == AccountStatus.Active && profile.AccountRole != AccountRoles.StaffManager,
                     canManageBrands = profile.AccountRole == AccountRoles.StockManager,
                     canManageItems = profile.AccountRole == AccountRoles.Nemployee,
                     canManageEmployees = profile.AccountRole == AccountRoles.StaffManager

@@ -43,7 +43,7 @@ internal sealed class WarehouseService(
         return database.RunAsync(async (transaction, token) =>
         {
             var actor = await employees.FindForWriteAsync(actorId, transaction, token);
-            if (actor is not { Status: AccountStatus.Active })
+            if (actor is not { Status: AccountStatus.Active } || actor.Role == AccountRoles.StaffManager)
             {
                 throw ApiError.Forbidden();
             }

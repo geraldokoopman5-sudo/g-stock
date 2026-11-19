@@ -60,6 +60,18 @@ export function getInventorySummary(catalog: InventoryCatalog) {
   return { brands: catalog.brands.length, itemLines: catalog.items.length, lowStock, outOfStock, needsAttention: lowStock + outOfStock }
 }
 
+export function getStockAlerts(catalog: InventoryCatalog) {
+  const brands = new Map(catalog.brands.map((brand) => [brand.id, brand]))
+  const warehouses = new Map(catalog.warehouses.map((warehouse) => [warehouse.id, warehouse]))
+  return catalog.items.filter((item) => getStockStatus(item) !== 'in-stock').map((item) => {
+    const brand = brands.get(item.brandId)
+    return { item, brand, warehouse: brand ? warehouses.get(brand.warehouseId) : undefined }
+  }).sort((a, b) => Number(b.item.quantity === 0) - Number(a.item.quantity === 0)
+    || (a.warehouse?.name ?? '').localeCompare(b.warehouse?.name ?? '')
+    || (a.brand?.name ?? '').localeCompare(b.brand?.name ?? '')
+    || a.item.name.localeCompare(b.item.name) || a.item.id.localeCompare(b.item.id))
+}
+
 export function getBrandGroups(catalog: InventoryCatalog, filters: InventoryFilters = {}) {
   const query = filters.query?.trim().toLowerCase() ?? ''
   return catalog.brands.map((brand) => {

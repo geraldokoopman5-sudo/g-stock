@@ -1,6 +1,6 @@
 import { api, jsonBody } from './client'
-import type { EmployeeAccount, EmployeeEdit, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
-import type { InventoryAction, InventoryActivity, InventoryBrand, InventoryItem, InventoryState, InventoryWarehouse } from '../types/inventory'
+import type { EmployeeAccount, EmployeeCreate, EmployeeEdit, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
+import type { InventoryAction, InventoryActivity, InventoryBrand, InventoryCatalog, InventoryItem, InventoryState, InventoryWarehouse } from '../types/inventory'
 
 export interface WorkspacePermissions {
   canCreateWarehouse: boolean
@@ -39,18 +39,22 @@ export async function loadAccounts(): Promise<EmployeeAccount[]> {
   return profiles.map((profile) => ({ profile, editHistory: [] }))
 }
 
-export async function loadInventory(): Promise<InventoryState> {
-  const [warehouses, brands, items, activity] = await Promise.all([
+export async function loadInventoryCatalog(): Promise<InventoryCatalog> {
+  const [warehouses, brands, items] = await Promise.all([
     api.request<InventoryWarehouse[]>('/warehouses'),
     allPages<Omit<InventoryBrand, 'initials'>>('/brands'),
     allPages<InventoryItem>('/items'),
-    allPages<ApiActivity>('/inventory/activity'),
   ])
+  return { warehouses, items, brands: brands.map((brand) => ({ ...brand,
+    initials: brand.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase(),
+  })) }
+}
+
+export async function loadInventory(): Promise<InventoryState> {
+  const [catalog, activity] = await Promise.all([loadInventoryCatalog(), allPages<ApiActivity>('/inventory/activity')])
   return {
     version: 2,
-    catalog: { warehouses, items, brands: brands.map((brand) => ({ ...brand,
-      initials: brand.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase(),
-    })) },
+    catalog,
     activity: activity.reverse().map((event) => ({ ...event,
       entityId: event.itemId ?? event.brandId ?? event.warehouseId,
       brandId: event.brandId ?? undefined,
@@ -69,6 +73,11 @@ export function saveEmployee(id: string, details: EmployeeUpdate) {
   return api.request<ApiProfile>(`/employees/${encodeURIComponent(id)}`, {
     ...jsonBody({ employeeId, fullName, email, department, role, ...(password ? { password } : {}) }), method: 'PATCH',
   })
+}
+
+export function createEmployee(details: EmployeeCreate) {
+  const { employeeId, fullName, email, department, role, accountRole, password } = details
+  return api.request<ApiProfile>('/employees', jsonBody({ employeeId, fullName, email, department, role, accountRole, password }))
 }
 
 export async function saveInventory(action: InventoryAction) {

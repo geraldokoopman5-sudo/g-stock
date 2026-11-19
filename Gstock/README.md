@@ -22,16 +22,19 @@ npm.cmd run dev
 
 Open the localhost URL printed by Vite (normally `http://localhost:5173`). Vite proxies `/api` to `http://localhost:5268`, preserving the original host so the API's same-origin checks work. Use `localhost` for the browser URL. Secure cookies are supported on localhost; deployed environments require HTTPS. `npm.cmd run preview` uses the same API proxy for checking a production build locally.
 
-Sign in with an account provisioned in the backend. A staff manager can create a normal employee through `POST /api/v1/employees` (the existing UI edits accounts but does not create them).
+Sign in with an account provisioned in the backend. Staff managers can open **Employee accounts → Add employee account** to create an Employee, Stock Manager, or Staff Manager. The form saves through `POST /api/v1/employees` and the new account can sign in immediately.
 
 | Account role | Allowed changes |
 | --- | --- |
-| All active accounts | Create warehouses |
-| StockManager | Create brands |
-| Nemployee | Create items and adjust quantities |
-| StaffManager | Edit normal employee accounts and passwords |
+| StockManager | Create warehouses and brands |
+| Nemployee | Create warehouses and items, and adjust quantities |
+| StaffManager | Create accounts of all types; edit normal employee accounts and passwords; cannot create warehouses |
 
 These permissions follow the existing API policy; a manager does not automatically inherit normal employee stock permissions. The API enforces authorization independently of the UI.
+
+New stock items receive a SKU automatically when saved; the stock form does not ask for one. The API generates a `GST-` prefix followed by the item's 32 uppercase hexadecimal ID characters, and PostgreSQL enforces SKU uniqueness across all warehouses, including archived items. Existing SKUs are preserved. API clients can still submit an explicit SKU; omitted, null, empty, or whitespace-only SKUs generate one automatically. No database migration is needed.
+
+Explore shows an alert count and a low-stock list for items at or below their configured threshold, including out-of-stock items. Each alert shows the item, SKU, brand, warehouse, storage location, quantity, and threshold. Opening it selects that exact stock item, even when its table row is on another page. Alerts are calculated from persisted inventory and cannot be dismissed; a partial restock or a quantity equal to the threshold keeps the alert, and a quantity strictly above it clears the alert. The list refreshes on opening Explore, every 30 seconds while it is open and visible, and when returning to the window. Failed refreshes retain the last loaded levels with a message.
 
 ## Sessions and deployment
 

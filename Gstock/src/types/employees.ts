@@ -21,6 +21,7 @@ export type UserCredentials = Pick<User, 'email' | 'password'>
 
 export type EmployeeDetails = Pick<EmployeeProfile, 'employeeId' | 'department' | 'role' | 'email' | 'fullName'>
 export type EmployeeUpdate = EmployeeDetails & { password?: string }
+export type EmployeeCreate = EmployeeDetails & { accountRole: NonNullable<EmployeeProfile['accountRole']>; password: string }
 export type EmployeeField = keyof EmployeeDetails | 'status'
 
 export interface EmployeeChange {

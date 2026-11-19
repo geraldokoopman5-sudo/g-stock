@@ -50,8 +50,9 @@ function Connect-SmokeManager([string]$Role) {
         password = $credential.GetNetworkCredential().Password
     }
     $profile = Invoke-SmokeRequest Get '/auth/me' 200 $login.accessToken
-    if ($profile.profile.accountRole -cne $Role -or !$profile.permissions.canCreateWarehouse) {
-        throw "Expected an active $Role with warehouse creation permission."
+    $canCreateWarehouse = $Role -eq 'StockManager'
+    if ($profile.profile.accountRole -cne $Role -or $profile.permissions.canCreateWarehouse -ne $canCreateWarehouse) {
+        throw "Expected an active $Role with the correct warehouse creation permission."
     }
     return $login.accessToken
 }
@@ -86,13 +87,14 @@ $warehouseInput = @{
 $invalidAddress = $warehouseInput.Clone()
 $invalidAddress.Remove('postalCode')
 $null = Invoke-SmokeRequest Post '/warehouses' 422 $stock -Body $invalidAddress
+$null = Invoke-SmokeRequest Post '/warehouses' 403 $staff -Body $warehouseInput
 $warehouse = Invoke-SmokeRequest Post '/warehouses' 201 $stock -Body $warehouseInput
 $warehousePath = "/warehouses/$($warehouse.id)"
 $warehouseInput.name = "Smoke Warehouse B $marker"
 $warehouseInput.streetName = "  1   SMOKE TEST ROAD $marker  "
-$null = Invoke-SmokeRequest Post '/warehouses' 409 $staff -Body $warehouseInput
+$null = Invoke-SmokeRequest Post '/warehouses' 409 $stock -Body $warehouseInput
 $warehouseInput.streetName = "2 Smoke Test Road $marker"
-$otherWarehouse = Invoke-SmokeRequest Post '/warehouses' 201 $staff -Body $warehouseInput
+$otherWarehouse = Invoke-SmokeRequest Post '/warehouses' 201 $stock -Body $warehouseInput
 $warehouseInput.name = "Smoke Warehouse C $marker"
 $warehouseInput.streetName = "3 Smoke Test Road $marker"
 $null = Invoke-SmokeRequest Post '/warehouses' 201 $clerk -Body $warehouseInput
@@ -110,6 +112,26 @@ $null = Invoke-SmokeRequest Post '/brands' 409 $stock -Body $brandInput
 $brandInput.warehouseId = $otherWarehouse.id
 $otherBrand = Invoke-SmokeRequest Post '/brands' 201 $stock -Body $brandInput
 if ($brand.id -eq $otherBrand.id) { throw 'The brands must have separate IDs.' }
+
+$generatedSkus = [System.Collections.Generic.HashSet[string]]::new()
+foreach ($skuValue in @($null, '', '   ')) {
+    $generatedInput = @{ brandId = $brand.id; name = "Generated SKU Item $marker"; quantity = 2; unit = 'units' }
+    if ($null -ne $skuValue) { $generatedInput.sku = $skuValue }
+    $generatedItem = Invoke-SmokeRequest Post '/items' 201 $clerk -Body $generatedInput
+    if ($generatedItem.sku -cnotmatch '^GST-[0-9A-F]{32}$' -or !$generatedSkus.Add($generatedItem.sku)) {
+        throw 'Items without a SKU must receive distinct generated SKUs.'
+    }
+    $found = @(Invoke-SmokeRequest Get "/items?query=$($generatedItem.sku)" 200 $clerk)
+    if ($found.Count -ne 1 -or $found[0].id -ne $generatedItem.id) {
+        throw 'The generated SKU could not be searched after saving.'
+    }
+    $generatedPath = "/items/$($generatedItem.id)"
+    $updatedItem = Invoke-SmokeRequest Post "$generatedPath/adjustments" 200 $clerk -Body @{
+        mode = 'add'; quantity = 1; expectedQuantity = 2; reason = 'Generated SKU smoke test'
+    }
+    if ($updatedItem.sku -cne $generatedItem.sku) { throw 'A quantity change replaced the generated SKU.' }
+    $null = Invoke-SmokeRequest Delete $generatedPath 204 $clerk
+}
 
 $itemInput = @{ brandId = $brand.id; name = "Smoke Item $marker"; sku = "SMOKE $marker"; quantity = 5; unit = 'units' }
 $wrongWarehouse = $itemInput.Clone()

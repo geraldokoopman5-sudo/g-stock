@@ -3,8 +3,8 @@ import LoginTransition from './components/LoginTransition'
 import Workspace from './components/Workspace'
 import ThemeToggle from './components/ThemeToggle'
 import { api, ApiError, errorMessage } from './api/client'
-import { loadAccounts, loadCurrentEmployee, loadEmployeeHistory, loadInventory, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
-import type { EmployeeAccount, EmployeeProfile, EmployeeUpdate } from './types/employees'
+import { createEmployee as createApiEmployee, loadAccounts, loadCurrentEmployee, loadEmployeeHistory, loadInventory, loadInventoryCatalog, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
+import type { EmployeeAccount, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from './types/employees'
 import type { InventoryAction, InventoryBrand, InventoryItem, InventorySaveResult, InventoryState, InventoryWarehouse } from './types/inventory'
 import type { WorkspacePermissions } from './api/workspace'
 import './App.css'
@@ -22,6 +22,7 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [screen, setScreen] = useState<'login' | 'intro' | 'workspace' | 'logout'>('login')
   const emailRef = useRef<HTMLInputElement>(null)
+  const inventoryRevision = useRef(0)
   const finishIntro = useCallback(() => setScreen('workspace'), [])
   const finishLogout = useCallback(() => setScreen('login'), [])
   async function reloadWorkspace() {
@@ -36,6 +37,7 @@ function App() {
   useEffect(() => {
     let cancelled = false
     api.onSessionExpired(() => {
+      inventoryRevision.current++
       setEmployee(null)
       setAccounts([])
       setInventory({ version: 2, catalog: { warehouses: [], brands: [], items: [] }, activity: [] })
@@ -76,14 +78,31 @@ function App() {
     } catch (error) { return errorMessage(error) }
   }
 
+  async function createEmployee(details: EmployeeCreate) {
+    try {
+      const profile = await createApiEmployee(details)
+      setAccounts((current) => [{ profile, editHistory: [] }, ...current])
+      return null
+    } catch (error) { return errorMessage(error) }
+  }
+
   const openEmployee = useCallback(async (accountId: string) => {
     const editHistory = await loadEmployeeHistory(accountId)
     setAccounts((current) => current.map((account) => account.profile.id === accountId ? { ...account, editHistory } : account))
   }, [])
 
+  const refreshInventory = useCallback(async () => {
+    const revision = ++inventoryRevision.current
+    const catalog = await loadInventoryCatalog()
+    // Older refreshes must not replace a newer refresh, a stock write, or a signed-out state.
+    if (revision === inventoryRevision.current) setInventory((current) => ({ ...current, catalog }))
+  }, [])
+
   async function saveInventory(action: InventoryAction): Promise<InventorySaveResult> {
+    inventoryRevision.current++
     try {
       const entity = await saveApiInventory(action)
+      inventoryRevision.current++
       // Reflect a committed write immediately, even if refreshing activity later fails.
       setInventory((current) => {
         const catalog = current.catalog
@@ -112,6 +131,7 @@ function App() {
     setSigningOut(true)
     try {
       await api.logout()
+      inventoryRevision.current++
       setEmployee(null)
       setAccounts([])
       setInventory({ version: 2, catalog: { warehouses: [], brands: [], items: [] }, activity: [] })
@@ -132,7 +152,7 @@ function App() {
     return (
       <>
         {workspaceError && <div className="stock-feedback" role="alert">{workspaceError} <button type="button" onClick={() => { void reloadWorkspace().catch((error) => setWorkspaceError(errorMessage(error))) }}>Reload workspace</button></div>}
-        <Workspace employee={employee} permissions={permissions} accounts={accounts} onSaveEmployee={saveEmployee} onOpenEmployee={openEmployee} inventory={inventory} onInventoryAction={saveInventory} active={screen === 'workspace'} onSignOut={() => { void signOut() }} signingOut={signingOut} />
+        <Workspace employee={employee} permissions={permissions} accounts={accounts} onSaveEmployee={saveEmployee} onCreateEmployee={createEmployee} onOpenEmployee={openEmployee} inventory={inventory} onInventoryAction={saveInventory} onRefreshInventory={refreshInventory} active={screen === 'workspace'} onSignOut={() => { void signOut() }} signingOut={signingOut} />
         {screen === 'intro' && <LoginTransition onComplete={finishIntro} />}
       </>
     )

@@ -31,7 +31,6 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
   const [contactEmail, setContactEmail] = useState('')
   const [notes, setNotes] = useState('')
   const [description, setDescription] = useState('')
-  const [sku, setSku] = useState('')
   const [location, setLocation] = useState('')
   const [quantity, setQuantity] = useState(selection.mode === 'item' ? '0' : '')
   const [unit, setUnit] = useState<(typeof inventoryUnits)[number]>('units')
@@ -64,7 +63,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
           let action: InventoryAction
           if (selection.mode === 'warehouse') action = { type: 'add-warehouse', input: { name, contactName, contactEmail, notes, ...address, postalCode: Number(address.postalCode) } }
           else if (selection.mode === 'brand') action = { type: 'add-brand', input: { warehouseId, name, description } }
-          else if (selection.mode === 'item') action = { type: 'add-item', input: { brandId, name, sku, location, quantity: Number(quantity), unit, reorderLevel: Number(reorderLevel) } }
+          else if (selection.mode === 'item') action = { type: 'add-item', input: { brandId, name, location, quantity: Number(quantity), unit, reorderLevel: Number(reorderLevel) } }
           else action = { type: 'adjust-quantity', itemId: selection.itemId ?? '', mode: quantityMode, quantity: Number(quantity), expectedQuantity, reason }
           savingRef.current = true
           setSaving(true)
@@ -98,7 +97,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
             <div className="field"><label htmlFor={`${id}-brand`}>Brand</label><select id={`${id}-brand`} value={brandId} required onChange={(event) => setBrandId(event.target.value)}>{!availableBrands.length && <option value="">No brands for this warehouse</option>}{availableBrands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
             {!availableBrands.length && warehouseId && <p className="stock-form__notice">A stock manager must add a brand before its stock can be added. {onAddBrand && <button type="button" onClick={() => onAddBrand(warehouseId)}>Add brand</button>}</p>}
             <div className="field"><label htmlFor={`${id}-name`}>Item name</label><input id={`${id}-name`} value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} /></div>
-            <div className="field"><label htmlFor={`${id}-sku`}>SKU <span>(optional)</span></label><input id={`${id}-sku`} value={sku} onChange={(event) => setSku(event.target.value)} maxLength={40} /></div>
+            <p className="stock-form__notice">A unique SKU will be generated automatically when you save this item.</p>
             <div className="field"><label htmlFor={`${id}-location`}>Warehouse location</label><input id={`${id}-location`} placeholder="e.g. A-01-01" value={location} onChange={(event) => setLocation(event.target.value)} required maxLength={80} /></div>
             <div className="stock-form__row"><div className="field"><label htmlFor={`${id}-quantity`}>Opening quantity</label><input id={`${id}-quantity`} type="number" min={0} max={maxStockQuantity} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></div><div className="field"><label htmlFor={`${id}-unit`}>Unit</label><select id={`${id}-unit`} value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}>{inventoryUnits.map((value) => <option key={value} value={value}>{value}</option>)}</select></div></div>
             <div className="field"><label htmlFor={`${id}-reorder`}>Low-stock threshold</label><input id={`${id}-reorder`} type="number" min={0} max={maxStockQuantity} step={1} value={reorderLevel} onChange={(event) => setReorderLevel(event.target.value)} required /></div>

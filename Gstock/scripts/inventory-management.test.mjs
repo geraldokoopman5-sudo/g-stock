@@ -211,3 +211,26 @@ test('warehouse pages expose ownership, brands and stock links; inventory offers
   const home = renderToStaticMarkup(React.createElement(Workspace, { employee: employees[0], accounts: [], inventory: state, onInventoryAction: onAction, onSaveEmployee: async () => null, active: true, onSignOut() {} }))
   assert.ok(!home.includes('Orders'))
 })
+
+test('staff managers cannot add warehouses while stock managers and employees retain access', () => {
+  const state = store.createInventoryState()
+  for (const accountRole of ['StaffManager', 'StockManager', 'Nemployee']) {
+    const warehouses = renderToStaticMarkup(React.createElement(Warehouses, {
+      catalog: state.catalog, activity: [], onAction: async () => ({ ok: false, error: 'Test only' }),
+      permissions: { canCreateWarehouse: accountRole !== 'StaffManager', canManageBrands: false, canManageItems: false, canManageEmployees: accountRole === 'StaffManager' },
+    }))
+    assert.equal(/disabled=""[^>]*>Add warehouse<\/button>/.test(warehouses), accountRole === 'StaffManager')
+  }
+})
+
+test('the stock creation form explains automatic SKUs and has no manual SKU input', async () => {
+  const InventoryEditor = (await server.ssrLoadModule('/src/components/InventoryEditor.tsx')).default
+  const markup = renderToStaticMarkup(React.createElement(InventoryEditor, {
+    selection: { mode: 'item', brandId: 'northline' }, catalog: store.createInventoryState().catalog,
+    onSave: async () => ({ ok: false, error: 'Test only' }), onClose() {}, onComplete() {},
+  }))
+  assert.ok(markup.includes('A unique SKU will be generated automatically'))
+  assert.ok(!/<input[^>]*(?:id|name)="[^"]*sku/i.test(markup))
+  assert.ok(markup.includes('Item name'))
+  assert.ok(markup.includes('Warehouse location'))
+})

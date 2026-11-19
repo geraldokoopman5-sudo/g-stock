@@ -1,4 +1,10 @@
 .employee-accounts { min-height: calc(100svh - 180px); padding: 64px 0 80px; }
+.employee-accounts__heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+.employee-create-dialog .stock-form .field { margin-top: 20px; }
+.employee-create-dialog .stock-dialog__content > p { color: var(--color-text-secondary); font-size: 14px; line-height: 1.7; }
+.employee-create-dialog__hint { margin-top: 8px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.6; }
+.employee-create-dialog .stock-form label { font-size: 14px; }
+.employee-create-dialog select { appearance: none; padding-right: 36px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%236b7e8c' stroke-width='1.5' d='m4 6 4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
 .employee-accounts > .eyebrow, .employee-accounts__title .eyebrow { margin-bottom: 20px; color: var(--color-accent-text); }
 .workspace .employee-accounts h1 { font-size: clamp(32px, 5vw, 54px); overflow-wrap: anywhere; }
 .employee-accounts__viewer { margin-top: 16px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.8; }
