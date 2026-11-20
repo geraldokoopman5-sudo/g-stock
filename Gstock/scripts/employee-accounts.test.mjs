@@ -104,15 +104,14 @@ test('invalid or unavailable browser storage falls back to sample accounts', () 
 
 test('account cards show read-only job titles, staff-only Edit, and audit details without departments', async () => {
   const { accounts, manager, employee } = scenario()
-  const stock = accounts.find(({ profile }) => profile.accountRole === 'StockManager').profile
-  const render = (props) => renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts, viewer: stock, onSave: async () => null, ...props }))
+  const render = (props) => renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts, viewer: manager, onSave: async () => null, ...props }))
   const list = render({})
   assert.ok(list.includes('Employee accounts'))
   for (const { profile } of accounts) assert.ok(list.includes(`#employees/${encodeURIComponent(profile.id)}`))
   const detail = render({ selectedId: employee.id })
   assert.ok(detail.includes('reflective-card'))
   assert.ok(detail.includes(employee.employeeId))
-  assert.ok(!detail.includes('>Edit</button>'))
+  assert.ok(detail.includes('>Edit</button>'))
   assert.ok(render({ selectedId: employee.id, viewer: manager }).includes('>Edit</button>'))
   const updated = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, fullName: 'Updated Name' })
   const activity = render({ accounts: updated.accounts, selectedId: employee.id })
@@ -298,27 +297,29 @@ test('job titles are a frontend enum matching account types and employee request
   } finally { api.request = originalRequest }
 })
 
-test('normal employees cannot render the employee directory or a direct account link', () => {
+test('normal employees and stock managers cannot render the employee page or a direct account link', () => {
   const { accounts, employee, manager } = scenario()
-  for (const selectedId of [undefined, employee.id, manager.id]) {
-    const markup = renderToStaticMarkup(React.createElement(EmployeeAccounts, {
-      accounts, viewer: employee, selectedId, onSave: async () => null,
-    }))
-    assert.ok(markup.includes('Page unavailable'))
-    assert.ok(!markup.includes(manager.email))
-    assert.ok(!markup.includes(employee.email))
-    assert.ok(!markup.includes('Edit history'))
-    assert.ok(!markup.includes('reflective-card'))
+  for (const accountRole of ['Nemployee', 'StockManager']) {
+    for (const selectedId of [undefined, employee.id, manager.id]) {
+      const markup = renderToStaticMarkup(React.createElement(EmployeeAccounts, {
+        accounts, viewer: { ...employee, role: accountRole, accountRole }, selectedId, onSave: async () => null,
+      }))
+      assert.ok(markup.includes('Page unavailable'))
+      assert.ok(!markup.includes(manager.email))
+      assert.ok(!markup.includes(employee.email))
+      assert.ok(!markup.includes('Edit history'))
+      assert.ok(!markup.includes('reflective-card'))
+    }
   }
 })
 
-test('workspace loading skips employee data for normal employees and keeps manager access', async () => {
+test('workspace loading fetches employee data only for Staff Managers', async () => {
   const workspace = await server.ssrLoadModule('/src/api/workspace.ts')
   const { api } = await server.ssrLoadModule('/src/api/client.ts')
   const originalRequest = api.request
   const { employee } = scenario()
   try {
-    for (const [accountRole, allowed] of [['Nemployee', false], ['StockManager', true], ['StaffManager', true]]) {
+    for (const [accountRole, allowed] of [['Nemployee', false], ['StockManager', false], ['StaffManager', true]]) {
       const calls = []
       const profile = { ...employee, role: accountRole, accountRole, status: 'Active' }
       api.request = async path => {

@@ -22,7 +22,7 @@ export function canChangeAccountType(employee: EmployeeProfile) {
 }
 
 export function canViewEmployeeAccounts(employee: EmployeeProfile) {
-  return employee.status === 'Active' && (employee.accountRole === 'StockManager' || employee.accountRole === 'StaffManager')
+  return employee.status === 'Active' && employee.accountRole === 'StaffManager'
 }
 
 export function canEditEmployeeAccounts(employee: EmployeeProfile) {
