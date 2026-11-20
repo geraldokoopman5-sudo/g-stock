@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
 
+// vercel.json explicitly routes /api/v1/* here; Vite does not provide Next.js catch-all routes.
 // Keep cookies on the frontend's origin while calling the backend server to server.
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store')

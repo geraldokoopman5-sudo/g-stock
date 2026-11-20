@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
+import { readFile } from 'node:fs/promises'
 import { loadConfigFromFile } from 'vite'
-import handler from '../api/[...path].js'
+import handler from '../api/proxy.js'
 
 const originalFetch = globalThis.fetch
 const originalTarget = process.env.API_PROXY_TARGET
@@ -28,6 +29,36 @@ function request(options = {}) {
     ...options,
   }
 }
+
+test('Vercel routes nested authentication, inventory and photo URLs to an existing proxy function', async () => {
+  const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'))
+  const rules = (config.rewrites ?? []).map(rule => ({
+    ...rule, pattern: new URLPattern({ pathname: rule.source }),
+  }))
+  process.env.API_PROXY_TARGET = 'https://gstock.onrender.com'
+  for (const path of [
+    '/api/v1/auth/login', '/api/v1/auth/csrf', '/api/v1/auth/refresh', '/api/v1/auth/logout',
+    '/api/v1/inventory/activity?limit=20&offset=40', '/api/v1/items/item-id/photo',
+    '/api/v1/brands?limit=200&offset=0',
+  ]) {
+    const rule = rules.find(rule => rule.pattern.test(`https://gstock.vercel.app${path}`))
+    assert.ok(rule, `Missing Vercel rewrite for ${path}`)
+    const entrypoint = `${rule.destination.slice(1)}.js`
+    assert.equal(config.functions[entrypoint]?.maxDuration, 60)
+    const { default: routedHandler } = await import(new URL(`../${entrypoint}`, import.meta.url))
+    globalThis.fetch = async url => {
+      assert.equal(url.href, `https://gstock.onrender.com${path}`)
+      return new Response(null, { status: 204 })
+    }
+    const res = response()
+    await routedHandler(request({ url: path }), res)
+    assert.equal(res.statusCode, 204)
+  }
+  for (const path of ['/', '/assets/index.js', '/api/v10/auth/login', '/api/proxy']) {
+    assert.ok(!rules.some(rule => rule.pattern.test(`https://gstock.vercel.app${path}`)),
+      `Unexpected API rewrite for ${path}`)
+  }
+})
 
 test('hosted proxy forwards authentication and JSON, translates a validated origin and preserves refresh cookies', async () => {
   process.env.API_PROXY_TARGET = 'https://gstock.onrender.com'
