@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Gstock.Api.Modules.Employees.Application;
 using Gstock.Api.Modules.Employees.Infrastructure;
 using Gstock.Api.Shared.Api;
+using Gstock.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gstock.Api.Modules.Employees.Api;
@@ -11,6 +12,19 @@ internal static class EmployeeEndpoints
     public static void MapEmployeeEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var routes = endpoints.MapGroup("/api/v1/employees").RequireAuthorization();
+        routes.AddEndpointFilter(async (context, next) =>
+        {
+            if (HttpMethods.IsGet(context.HttpContext.Request.Method))
+            {
+                var repository = context.HttpContext.RequestServices.GetRequiredService<PostgresEmployeeRepository>();
+                var viewer = await FindAsync(repository, context.HttpContext.User.EmployeeId(), context.HttpContext.RequestAborted);
+                if (viewer.Status != AccountStatus.Active || viewer.AccountRole == AccountRoles.Nemployee)
+                {
+                    throw ApiError.Forbidden();
+                }
+            }
+            return await next(context);
+        });
         routes.MapGet("", async (string? query, int? limit, int? offset,
             [FromServices] PostgresEmployeeRepository employees, CancellationToken token) =>
             Results.Ok(await employees.ReadAsync(null, query, Math.Clamp(limit ?? 50, 1, 200),

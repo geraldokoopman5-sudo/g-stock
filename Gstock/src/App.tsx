@@ -4,7 +4,7 @@ import Workspace from './components/Workspace'
 import ThemeToggle from './components/ThemeToggle'
 import BrandLogo from './components/BrandLogo'
 import { api, ApiError, errorMessage } from './api/client'
-import { changeEmployeeAccountType, createEmployee as createApiEmployee, loadAccounts, loadCurrentEmployee, loadEmployeeHistory, loadInventory, loadInventoryCatalog, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
+import { changeEmployeeAccountType, createEmployee as createApiEmployee, loadEmployeeHistory, loadInventory, loadInventoryCatalog, loadWorkspaceData, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from './types/employees'
 import type { InventoryAction, InventoryBrand, InventoryItem, InventorySaveResult, InventoryState, InventoryWarehouse } from './types/inventory'
 import type { WorkspacePermissions } from './api/workspace'
@@ -27,7 +27,7 @@ function App() {
   const finishIntro = useCallback(() => setScreen('workspace'), [])
   const finishLogout = useCallback(() => setScreen('login'), [])
   async function reloadWorkspace() {
-    const [current, nextAccounts, nextInventory] = await Promise.all([loadCurrentEmployee(), loadAccounts(), loadInventory()])
+    const { current, accounts: nextAccounts, inventory: nextInventory } = await loadWorkspaceData()
     setEmployee(current.profile)
     setPermissions(current.permissions)
     setAccounts(nextAccounts)
@@ -48,7 +48,7 @@ function App() {
     async function restore() {
       try {
         if (!await api.restore() || cancelled) return
-        const [current, nextAccounts, nextInventory] = await Promise.all([loadCurrentEmployee(), loadAccounts(), loadInventory()])
+        const { current, accounts: nextAccounts, inventory: nextInventory } = await loadWorkspaceData()
         if (cancelled) return
         setEmployee(current.profile)
         setPermissions(current.permissions)

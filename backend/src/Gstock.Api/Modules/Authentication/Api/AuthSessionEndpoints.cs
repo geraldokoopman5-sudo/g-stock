@@ -34,6 +34,7 @@ internal static class AuthSessionEndpoints
                     canCreateWarehouse = profile.Status == AccountStatus.Active && profile.AccountRole != AccountRoles.StaffManager,
                     canManageBrands = profile.AccountRole == AccountRoles.StockManager,
                     canManageItems = profile.AccountRole == AccountRoles.Nemployee,
+                    canViewEmployees = profile.Status == AccountStatus.Active && profile.AccountRole != AccountRoles.Nemployee,
                     canManageEmployees = profile.AccountRole == AccountRoles.StaffManager
                 }
             });

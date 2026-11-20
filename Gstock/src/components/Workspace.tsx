@@ -6,6 +6,7 @@ import Inventory from './Inventory'
 import Warehouses from './Warehouses'
 import ThemeToggle from './ThemeToggle'
 import BrandLogo from './BrandLogo'
+import { canViewEmployeeAccounts } from '../data/employeeAccounts'
 import StockAlerts from './StockAlerts'
 import { getStockAlerts } from '../data/inventory'
 import type { InventoryState, SaveInventoryAction } from '../types/inventory'
@@ -52,11 +53,14 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
     canManageBrands: !employee.accountRole || employee.accountRole === 'StockManager',
     canManageItems: !employee.accountRole || employee.accountRole === 'Nemployee',
     canManageEmployees: employee.accountRole === 'StaffManager',
+    canViewEmployees: canViewEmployeeAccounts(employee),
   }
+  const canViewEmployees = canViewEmployeeAccounts(employee) && permissions.canViewEmployees !== false
+  const visiblePages = pages.filter(destination => destination.id !== 'employees' || canViewEmployees)
   const route = useSyncExternalStore(subscribeToPage, currentPage, () => '#home')
   const [routePage, selectedId, selectedItemId] = route.slice(1).split('/')
   const alerts = getStockAlerts(inventory.catalog)
-  const page = pages.find((entry) => entry.id === routePage) ?? pages[0]
+  const page = visiblePages.find((entry) => entry.id === routePage) ?? pages[0]
   const pageId = page.id
   const [navigationOpen, setNavigationOpen] = useState(false)
   const navigationRef = useRef<HTMLDivElement>(null)
@@ -128,7 +132,7 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
           <nav className="workspace-navigation__panel" id="workspace-navigation" aria-label="Workspace pages">
             <p className="eyebrow">YOUR WORKSPACE</p>
             <ul>
-              {pages.map((destination, index) => (
+              {visiblePages.map((destination, index) => (
                 <li key={destination.id}>
                   <a ref={index === 0 ? firstLinkRef : undefined} href={`#${destination.id}`} aria-current={pageId === destination.id ? 'page' : undefined} onClick={() => {
                     setNavigationOpen(false)

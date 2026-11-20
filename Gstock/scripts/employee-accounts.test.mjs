@@ -104,7 +104,8 @@ test('invalid or unavailable browser storage falls back to sample accounts', () 
 
 test('account cards show read-only job titles, staff-only Edit, and audit details without departments', async () => {
   const { accounts, manager, employee } = scenario()
-  const render = (props) => renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts, viewer: employee, onSave: async () => null, ...props }))
+  const stock = accounts.find(({ profile }) => profile.accountRole === 'StockManager').profile
+  const render = (props) => renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts, viewer: stock, onSave: async () => null, ...props }))
   const list = render({})
   assert.ok(list.includes('Employee accounts'))
   for (const { profile } of accounts) assert.ok(list.includes(`#employees/${encodeURIComponent(profile.id)}`))
@@ -136,7 +137,7 @@ test('staff can change employee passwords without putting values in profiles or 
   assert.ok(!JSON.stringify(result.accounts).includes(password))
   assert.equal(await passwords.verifyEmployeePassword(target, password), true)
   assert.equal(await passwords.verifyEmployeePassword(target, 'Wrong-password'), false)
-  const activity = renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts: result.accounts, viewer: employee, selectedId: employee.id, onSave: async () => null }))
+  const activity = renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts: result.accounts, viewer: manager, selectedId: employee.id, onSave: async () => null }))
   assert.ok(activity.includes('Password changed'))
   assert.ok(activity.includes(manager.fullName))
   assert.ok(!activity.includes(password))
@@ -294,5 +295,52 @@ test('job titles are a frontend enum matching account types and employee request
     }
     await workspace.createEmployee(input)
     await workspace.saveEmployee('employee-id', input)
+  } finally { api.request = originalRequest }
+})
+
+test('normal employees cannot render the employee directory or a direct account link', () => {
+  const { accounts, employee, manager } = scenario()
+  for (const selectedId of [undefined, employee.id, manager.id]) {
+    const markup = renderToStaticMarkup(React.createElement(EmployeeAccounts, {
+      accounts, viewer: employee, selectedId, onSave: async () => null,
+    }))
+    assert.ok(markup.includes('Page unavailable'))
+    assert.ok(!markup.includes(manager.email))
+    assert.ok(!markup.includes(employee.email))
+    assert.ok(!markup.includes('Edit history'))
+    assert.ok(!markup.includes('reflective-card'))
+  }
+})
+
+test('workspace loading skips employee data for normal employees and keeps manager access', async () => {
+  const workspace = await server.ssrLoadModule('/src/api/workspace.ts')
+  const { api } = await server.ssrLoadModule('/src/api/client.ts')
+  const originalRequest = api.request
+  const { employee } = scenario()
+  try {
+    for (const [accountRole, allowed] of [['Nemployee', false], ['StockManager', true], ['StaffManager', true]]) {
+      const calls = []
+      const profile = { ...employee, role: accountRole, accountRole, status: 'Active' }
+      api.request = async path => {
+        calls.push(path)
+        if (path === '/auth/me') return { profile, permissions: { canViewEmployees: allowed } }
+        if (path.startsWith('/employees')) {
+          assert.ok(allowed, 'Normal employee login must not fetch the directory')
+          return [profile]
+        }
+        return []
+      }
+      const result = await workspace.loadWorkspaceData()
+      assert.equal(result.current.profile.id, employee.id)
+      assert.equal(result.accounts.length, allowed ? 1 : 0)
+      assert.equal(calls.some(path => path.startsWith('/employees')), allowed)
+      assert.ok(calls.includes('/auth/me'))
+    }
+    api.request = async path => {
+      if (path === '/auth/me') return { profile: { ...employee, accountRole: 'StaffManager' }, permissions: { canViewEmployees: false } }
+      assert.ok(!path.startsWith('/employees'), 'Respect a server denial even for a manager profile')
+      return []
+    }
+    assert.deepEqual((await workspace.loadWorkspaceData()).accounts, [])
   } finally { api.request = originalRequest }
 })

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
-import { accountTypeLabels, canChangeAccountType, canEditEmployeeAccounts, employeeFieldLabels, employeeFields, jobTitleLabel } from '../data/employeeAccounts'
+import { accountTypeLabels, canChangeAccountType, canEditEmployeeAccounts, canViewEmployeeAccounts, employeeFieldLabels, employeeFields, jobTitleLabel } from '../data/employeeAccounts'
 import EmployeeCard from './EmployeeCard'
 import CreateEmployeeDialog from './CreateEmployeeDialog'
 import ChangeAccountTypeForm from './ChangeAccountTypeForm'
@@ -169,6 +169,7 @@ function EmployeeAccountDetail({ account, viewer, onSave, onChangeAccountType }:
 }
 
 export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave, onCreate, onOpen, onChangeAccountType }: EmployeeAccountsProps) {
+  const canView = canViewEmployeeAccounts(viewer)
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
   const [createdName, setCreatedName] = useState('')
@@ -178,7 +179,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
   const historyError = historyResult.id === selectedId ? historyResult.error : ''
   const loadingHistory = Boolean(onOpen && selectedId && historyResult.id !== selectedId)
   useEffect(() => {
-    if (!selectedId || !onOpen) return
+    if (!canView || !selectedId || !onOpen) return
     let cancelled = false
     void onOpen(decodeURIComponent(selectedId)).then(() => {
       if (!cancelled) setHistoryResult({ id: selectedId, error: '' })
@@ -186,12 +187,14 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
       if (!cancelled) setHistoryResult({ id: selectedId, error: errorMessage(error) })
     })
     return () => { cancelled = true }
-  }, [selectedId, onOpen])
+  }, [selectedId, onOpen, canView])
   const heading = useRef<HTMLHeadingElement>(null)
   const query = search.trim().toLowerCase()
-  const filtered = accounts.filter(({ profile }) => [...employeeFields.map(field => profile[field]), jobTitleLabel(profile.role)].some(value => value.toLowerCase().includes(query)))
+  const filtered = canView ? accounts.filter(({ profile }) => [...employeeFields.map(field => profile[field]), jobTitleLabel(profile.role)].some(value => value.toLowerCase().includes(query))) : []
   const accountPages = usePagination(filtered, query)
   useEffect(() => { heading.current?.focus() }, [selectedId])
+
+  if (!canView) return <section className="employee-accounts"><h1 ref={heading} tabIndex={-1}>Page unavailable</h1><p>This page is available to managers.</p><a className="employee-accounts__back" href="#home">Back to your profile</a></section>
 
   if (selectedId) {
     const account = accounts.find((entry) => encodeURIComponent(entry.profile.id) === selectedId)

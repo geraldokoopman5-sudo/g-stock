@@ -108,7 +108,7 @@ function catalogFixture() {
 
 test('employees and warehouses render the first twenty records rather than the full collection', () => {
   const accounts = Array.from({ length: 45 }, (_, index) => ({ profile: { id: `employee-${index}`, employeeId: `EMP-${index}`, fullName: `Employee ${index + 1}`, role: 'Nemployee', accountRole: 'Nemployee', status: 'Active', email: `employee${index}@example.com` }, editHistory: [] }))
-  const employees = renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts, viewer: accounts[0].profile, onSave: async () => null }))
+  const employees = renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts, viewer: { ...accounts[0].profile, accountRole: 'StockManager', role: 'StockManager' }, onSave: async () => null }))
   assert.ok(employees.includes('#employees/employee-19'))
   assert.ok(!employees.includes('#employees/employee-20'))
   assert.ok(employees.includes('Showing 1–20 of 45 employee accounts'))

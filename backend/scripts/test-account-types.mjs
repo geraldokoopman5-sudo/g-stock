@@ -118,6 +118,20 @@ try {
     await new Promise(resolve => setTimeout(resolve, 250))
   }
   assert.ok(ready, `API startup timed out: ${apiLog}`)
+  for (const route of ['/employees', '/employees?limit=200&offset=0', `/employees/${actors.staff.id}`,
+    `/employees/${actors.staff.id}/edits`, `/employees/${actors.employee.id}`, `/employees/${randomUUID()}`]) {
+    await request(route, 401, null)
+    await request(route, 403, actors.employee)
+  }
+  for (const actor of [actors.stock, actors.staff]) {
+    await request('/employees', 200, actor)
+    await request(`/employees/${actors.employee.id}`, 200, actor)
+    await request(`/employees/${actors.employee.id}/edits`, 200, actor)
+  }
+  const ownProfile = await request('/auth/me', 200, actors.employee)
+  assert.equal(ownProfile.profile.id, actors.employee.id)
+  assert.equal(ownProfile.permissions.canViewEmployees, false)
+  console.log('PASS: normal employees cannot list, read or inspect account history; managers retain access and own profiles remain available.')
   const path = `/employees/${actors.employee.id}/account-type`
   await request(path, 401, null, { accountRole: 'StaffManager' })
   for (const actor of [actors.stock, actors.employee]) {
@@ -164,6 +178,8 @@ try {
     assert.equal(current.profile.accountRole, accountRole)
     assert.equal(current.profile.role, accountRole)
     assert.equal(current.permissions.canManageEmployees, accountRole === 'StaffManager')
+    assert.equal(current.permissions.canViewEmployees, accountRole !== 'Nemployee')
+    await request('/employees', accountRole === 'Nemployee' ? 403 : 200, actors.employee)
     await request(`/employees/${actors.stock.id}/account-type`, accountRole === 'StaffManager' ? 422 : 403,
       actors.employee, { accountRole: 'StockManager' })
   }
@@ -189,9 +205,12 @@ try {
   assert.equal((await request(`/employees/${actors.stock.id}`, 200)).fullName, 'stock')
   await request(`/employees/${actors.otherStaff.id}/account-type`, 200, actors.staff, { accountRole: 'StockManager' })
   await request('/auth/me', 401, actors.otherStaff)
+  actors.otherStaff.sessionId = randomUUID()
+  await sql(`INSERT INTO public.auth_sessions (id, employee_id, remember_me, absolute_expires_at, idle_expires_at)
+    VALUES ('${actors.otherStaff.sessionId}', '${actors.otherStaff.id}', false, now() + interval '1 day', now() + interval '1 hour');`)
   await request(`/employees/${actors.staff.id}/account-type`, 200, actors.staff, { accountRole: 'Nemployee' })
   await request('/auth/me', 401, actors.staff)
-  const selfHistory = await request(`/employees/${actors.staff.id}/edits`, 200, actors.employee)
+  const selfHistory = await request(`/employees/${actors.staff.id}/edits`, 200, actors.otherStaff)
   assert.equal(selfHistory[0].editedBy.role, 'Staff Manager')
   console.log('PASS: manager targets, unchanged profile protections and self-demotion/session expiry verified.')
 } catch (error) {

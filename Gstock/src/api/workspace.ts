@@ -1,4 +1,5 @@
 import { api, jsonBody } from './client'
+import { canViewEmployeeAccounts } from '../data/employeeAccounts'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeEdit, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import type { InventoryAction, InventoryActivity, InventoryBrand, InventoryCatalog, InventoryItem, InventoryState, InventoryWarehouse } from '../types/inventory'
 
@@ -7,6 +8,7 @@ export interface WorkspacePermissions {
   canManageBrands: boolean
   canManageItems: boolean
   canManageEmployees: boolean
+  canViewEmployees: boolean
 }
 
 type ApiProfile = EmployeeProfile & { accountRole: 'Nemployee' | 'StockManager' | 'StaffManager'; status: 'Active' | 'InActive' }
@@ -66,6 +68,15 @@ export async function loadInventory(): Promise<InventoryState> {
 
 export function loadCurrentEmployee() {
   return api.request<{ profile: ApiProfile; permissions: WorkspacePermissions }>('/auth/me')
+}
+
+export async function loadWorkspaceData() {
+  const current = await loadCurrentEmployee()
+  const [accounts, inventory] = await Promise.all([
+    canViewEmployeeAccounts(current.profile) && current.permissions.canViewEmployees !== false ? loadAccounts() : Promise.resolve([]),
+    loadInventory(),
+  ])
+  return { current, accounts, inventory }
 }
 
 export function saveEmployee(id: string, details: EmployeeUpdate) {
