@@ -9,7 +9,7 @@ public class Employees
     public required string FullName{get; set;}
     public required string email{get; set;}
     public required AccountRoles AccountRole{get; init;}
-    public required string Role{get; set;}
+    public AccountRoles Role => AccountRole;
     public required AccountStatus Status{get; set;}
     public required DateTime CreatedAt{get; init;}
     public required DateTime UpdatedAt{get; set;}

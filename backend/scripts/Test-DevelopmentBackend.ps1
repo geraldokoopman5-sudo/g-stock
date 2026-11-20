@@ -66,7 +66,6 @@ $employeeInput = @{
     fullName = "Smoke Employee $marker"
     email = $employeeLogin.email
     accountRole = 'Nemployee'
-    role = 'Inventory clerk'
     password = $employeeLogin.password
 }
 $null = Invoke-SmokeRequest Post '/employees' 403 $stock -Body $employeeInput
@@ -184,12 +183,12 @@ $null = Invoke-SmokeRequest Get '/auth/me' 401 $clerk
 $clerk = (Invoke-SmokeRequest Post '/auth/login' 200 -Body $employeeLogin).accessToken
 
 $null = Invoke-SmokeRequest Patch $employeePath 403 $stock -Body @{ fullName = 'Should not change' }
-$null = Invoke-SmokeRequest Patch $employeePath 200 $staff -Body @{ role = 'Senior inventory clerk'; status = 'InActive' }
+$null = Invoke-SmokeRequest Patch $employeePath 200 $staff -Body @{ fullName = 'Updated smoke employee'; status = 'InActive' }
 $null = Invoke-SmokeRequest Get '/auth/me' 401 $clerk
 $null = Invoke-SmokeRequest Post '/auth/login' 401 -Body $employeeLogin
 $edits = @(Invoke-SmokeRequest Get "$employeePath/edits" 200 $staff)
-if (!($edits.changes | Where-Object { $_.field -eq 'role' -and $_.after -eq 'Senior inventory clerk' })) {
-    throw 'The employee role change was missing from edit history.'
+if (!($edits.changes | Where-Object { $_.field -eq 'full_name' -and $_.after -eq 'Updated smoke employee' })) {
+    throw 'The employee name change was missing from edit history.'
 }
 $null = Invoke-SmokeRequest Patch $employeePath 200 $staff -Body @{ status = 'Active' }
 $clerk = (Invoke-SmokeRequest Post '/auth/login' 200 -Body $employeeLogin).accessToken

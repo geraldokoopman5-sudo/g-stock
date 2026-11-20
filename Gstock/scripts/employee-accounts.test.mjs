@@ -20,17 +20,20 @@ afterEach(() => { delete globalThis.window })
 
 function scenario() {
   const accounts = model.loadEmployeeAccounts()
-  const manager = accounts.find(({ profile }) => model.isManager(profile)).profile
-  const employee = accounts.find(({ profile }) => !model.isManager(profile)).profile
+  const manager = accounts.find(({ profile }) => profile.accountRole === 'StaffManager').profile
+  const employee = accounts.find(({ profile }) => profile.accountRole === 'Nemployee').profile
   return { accounts, manager, employee }
 }
 
-test('all existing employee accounts can edit other accounts under the temporary policy', async () => {
+test('only active staff managers can edit normal employee details', async () => {
   const { accounts, manager, employee } = scenario()
   const original = JSON.stringify(accounts)
-  const result = await model.updateEmployeeAccount(accounts, employee.id, manager.id, { ...manager, fullName: 'Changed name' })
+  const result = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, fullName: 'Changed name' })
   assert.equal(result.ok, true)
-  assert.equal(result.accounts.find(({ profile }) => profile.id === manager.id).editHistory[0].editedBy.id, employee.id)
+  assert.equal(result.accounts.find(({ profile }) => profile.id === employee.id).editHistory[0].editedBy.id, manager.id)
+  for (const { profile } of accounts.filter(account => account.profile.accountRole !== 'StaffManager')) {
+    assert.equal((await model.updateEmployeeAccount(accounts, profile.id, employee.id, { ...employee, fullName: 'Denied' })).ok, false)
+  }
   assert.equal(JSON.stringify(accounts), original)
   assert.equal((await model.updateEmployeeAccount(accounts, 'unknown-editor', employee.id, { ...employee, fullName: 'Changed name' })).ok, false)
 })
@@ -38,15 +41,15 @@ test('all existing employee accounts can edit other accounts under the temporary
 test('edits record the current editor and exact changes without mutating previous data', async () => {
   const { accounts, manager, employee } = scenario()
   const original = JSON.stringify(accounts)
-  const result = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, department: '  Dispatch  ', password: 'NEVER-PERSIST' })
+  const result = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, fullName: '  Updated Name  ', password: 'NEVER-PERSIST' })
   assert.equal(result.ok, true)
   const updated = result.accounts.find(({ profile }) => profile.id === employee.id)
-  assert.equal(updated.profile.department, 'Dispatch')
+  assert.equal(updated.profile.fullName, 'Updated Name')
   assert.equal(updated.editHistory.length, 1)
   assert.equal(updated.editHistory[0].editedBy.id, manager.id)
   assert.equal(updated.editHistory[0].editedBy.fullName, manager.fullName)
   assert.ok(Number.isFinite(Date.parse(updated.editHistory[0].editedAt)))
-  assert.deepEqual(updated.editHistory[0].changes, [{ field: 'department', before: employee.department, after: 'Dispatch' }])
+  assert.deepEqual(updated.editHistory[0].changes, [{ field: 'fullName', before: employee.fullName, after: 'Updated Name' }])
   assert.equal(JSON.stringify(accounts), original)
   assert.ok(!JSON.stringify(result.accounts).includes('NEVER-PERSIST'))
   assert.ok(!('password' in updated.profile))
@@ -64,21 +67,21 @@ test('required fields, malformed emails, duplicates, unknown accounts, and uncha
   assert.match((await update(employee)).error, /No changes/)
 })
 
-test('role changes retain the original audit identity and all roles can still edit', async () => {
+test('job titles cannot be independently edited, including by staff managers', async () => {
   const { accounts, manager, employee } = scenario()
-  const demotion = await model.updateEmployeeAccount(accounts, manager.id, manager.id, { ...manager, role: 'Coordinator' })
-  assert.equal(demotion.ok, true)
-  const changedManager = demotion.accounts.find(({ profile }) => profile.id === manager.id)
-  assert.equal(model.isManager(changedManager.profile), false)
-  assert.equal(changedManager.editHistory[0].editedBy.role, 'Manager')
-  assert.equal((await model.updateEmployeeAccount(demotion.accounts, manager.id, employee.id, { ...employee, department: 'Sales' })).ok, true)
+  for (const role of ['Custom title', 'StockManager', 'StaffManager']) {
+    const result = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, role })
+    assert.equal(result.ok, false)
+    assert.match(result.error, /read-only/)
+  }
+  assert.equal((await model.updateEmployeeAccount(accounts, manager.id, manager.id, { ...manager, fullName: 'Denied' })).ok, false)
 })
 
 test('edit history appends, survives a reload, and keeps prior editor names after a rename', async () => {
   const { accounts, manager, employee } = scenario()
-  const first = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, role: 'Stock lead' })
-  const second = await model.updateEmployeeAccount(first.accounts, manager.id, manager.id, { ...manager, fullName: 'Renamed Manager' })
-  const third = await model.updateEmployeeAccount(second.accounts, manager.id, employee.id, { ...employee, role: 'Stock lead', department: 'Dispatch' })
+  const first = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, fullName: 'Updated Name' })
+  const renamedAccounts = first.accounts.map(account => account.profile.id === manager.id ? { ...account, profile: { ...account.profile, fullName: 'Renamed Manager' } } : account)
+  const third = await model.updateEmployeeAccount(renamedAccounts, manager.id, employee.id, { ...employee, fullName: 'Updated Name', email: 'updated@example.test' })
   const json = JSON.stringify(third.accounts)
   globalThis.window = { localStorage: { getItem: () => json } }
   const restored = model.loadEmployeeAccounts()
@@ -99,7 +102,7 @@ test('invalid or unavailable browser storage falls back to sample accounts', () 
   assert.deepEqual(model.loadEmployeeAccounts(), samples)
 })
 
-test('account links open employee cards, every role sees Edit, and audit details remain visible', async () => {
+test('account cards show read-only job titles, staff-only Edit, and audit details without departments', async () => {
   const { accounts, manager, employee } = scenario()
   const render = (props) => renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts, viewer: employee, onSave: async () => null, ...props }))
   const list = render({})
@@ -108,57 +111,59 @@ test('account links open employee cards, every role sees Edit, and audit details
   const detail = render({ selectedId: employee.id })
   assert.ok(detail.includes('reflective-card'))
   assert.ok(detail.includes(employee.employeeId))
-  assert.ok(detail.includes('>Edit</button>'))
+  assert.ok(!detail.includes('>Edit</button>'))
   assert.ok(render({ selectedId: employee.id, viewer: manager }).includes('>Edit</button>'))
-  const updated = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, department: 'Dispatch' })
+  const updated = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, fullName: 'Updated Name' })
   const activity = render({ accounts: updated.accounts, selectedId: employee.id })
   assert.ok(activity.includes(manager.fullName))
   assert.ok(activity.includes('Edit history (1)'))
-  assert.ok(activity.includes('Dispatch'))
+  assert.ok(activity.includes('Updated Name'))
+  assert.ok(detail.includes('Job title'))
+  assert.ok(!detail.includes('Department'))
   assert.ok(render({ selectedId: 'unknown' }).includes('Account not found'))
 })
 
-test('any account can change a password without putting its value in profiles or audit history', async () => {
+test('staff can change employee passwords without putting values in profiles or audit history', async () => {
   const { accounts, manager, employee } = scenario()
   const password = 'New-test-password-42'
-  const result = await model.updateEmployeeAccount(accounts, employee.id, manager.id, { ...manager, password })
+  const result = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, password })
   assert.equal(result.ok, true)
-  const target = result.accounts.find(({ profile }) => profile.id === manager.id)
+  const target = result.accounts.find(({ profile }) => profile.id === employee.id)
   assert.ok(target.passwordVerifier)
   assert.equal(target.editHistory[0].passwordChanged, true)
-  assert.equal(target.editHistory[0].editedBy.id, employee.id)
+  assert.equal(target.editHistory[0].editedBy.id, manager.id)
   assert.deepEqual(target.editHistory[0].changes, [])
   assert.ok(!JSON.stringify(result.accounts).includes(password))
   assert.equal(await passwords.verifyEmployeePassword(target, password), true)
   assert.equal(await passwords.verifyEmployeePassword(target, 'Wrong-password'), false)
-  const activity = renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts: result.accounts, viewer: employee, selectedId: manager.id, onSave: async () => null }))
+  const activity = renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts: result.accounts, viewer: employee, selectedId: employee.id, onSave: async () => null }))
   assert.ok(activity.includes('Password changed'))
-  assert.ok(activity.includes(employee.fullName))
+  assert.ok(activity.includes(manager.fullName))
   assert.ok(!activity.includes(password))
   assert.ok(!activity.includes(target.passwordVerifier.hash))
   globalThis.window = { localStorage: { getItem: () => JSON.stringify(result.accounts) } }
-  const restored = model.loadEmployeeAccounts().find(({ profile }) => profile.id === manager.id)
+  const restored = model.loadEmployeeAccounts().find(({ profile }) => profile.id === employee.id)
   assert.equal(await passwords.verifyEmployeePassword(restored, password), true)
 })
 
 test('blank password edits preserve the existing password, replacements invalidate the old password', async () => {
-  const { accounts, employee } = scenario()
+  const { accounts, manager, employee } = scenario()
   assert.equal(await passwords.verifyEmployeePassword(accounts[0], 'Any-preview-password'), true)
-  const first = await model.updateEmployeeAccount(accounts, employee.id, employee.id, { ...employee, password: 'First-password' })
-  const profileOnly = await model.updateEmployeeAccount(first.accounts, employee.id, employee.id, { ...employee, department: 'Dispatch', password: '' })
+  const first = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, password: 'First-password' })
+  const profileOnly = await model.updateEmployeeAccount(first.accounts, manager.id, employee.id, { ...employee, fullName: 'Updated Name', password: '' })
   const account = profileOnly.accounts.find(({ profile }) => profile.id === employee.id)
   assert.equal(await passwords.verifyEmployeePassword(account, 'First-password'), true)
   assert.equal(account.editHistory.at(-1).passwordChanged, undefined)
-  const replacement = await model.updateEmployeeAccount(profileOnly.accounts, employee.id, employee.id, { ...account.profile, password: 'Second-password' })
+  const replacement = await model.updateEmployeeAccount(profileOnly.accounts, manager.id, employee.id, { ...account.profile, password: 'Second-password' })
   const changed = replacement.accounts.find(({ profile }) => profile.id === employee.id)
   assert.equal(await passwords.verifyEmployeePassword(changed, 'First-password'), false)
   assert.equal(await passwords.verifyEmployeePassword(changed, 'Second-password'), true)
 })
 
 test('invalid password lengths are rejected and identical passwords receive different salts', async () => {
-  const { accounts, employee } = scenario()
+  const { accounts, manager, employee } = scenario()
   for (const password of ['short', 'x'.repeat(129)]) {
-    const result = await model.updateEmployeeAccount(accounts, employee.id, employee.id, { ...employee, password })
+    const result = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, password })
     assert.equal(result.ok, false)
     assert.match(result.error, /8 and 128/)
   }
@@ -207,7 +212,9 @@ test('account creation form offers every account type and requires confirmed new
     assert.ok(input(name).includes('minLength="8"'))
     assert.ok(input(name).includes('autoComplete="new-password"'))
   }
-  assert.ok(!input('department').includes('required'))
+  assert.ok(!markup.includes('name="department"'))
+  assert.ok(!markup.includes('name="role"'))
+  assert.ok(markup.includes('readOnly=""'))
 })
 
 test('only active staff managers can change account types, including manager accounts', () => {
@@ -219,10 +226,10 @@ test('only active staff managers can change account types, including manager acc
       accounts: [{ ...accounts[0], profile: target }], viewer, selectedId: target.id,
       onSave: async () => null, onChangeAccountType: async () => null,
     }))
-    assert.ok(render(staff).includes('>Change account type</button>'))
+    assert.ok(render(staff).includes('>Change job title / account type</button>'))
     for (const viewer of [employee, { ...staff, status: 'InActive' },
       { ...staff, accountRole: 'StockManager' }, { ...staff, accountRole: 'Nemployee' }]) {
-      assert.ok(!render(viewer).includes('>Change account type</button>'))
+      assert.ok(!render(viewer).includes('>Change job title / account type</button>'))
     }
   }
 })
@@ -261,5 +268,31 @@ test('account-type API sends only the selected type and maps account-type audit 
     const history = await workspace.loadEmployeeHistory('employee/id')
     assert.equal(history[0].changes[0].field, 'accountRole')
     assert.equal(model.employeeFieldLabels[history[0].changes[0].field], 'Account type')
+  } finally { api.request = originalRequest }
+})
+
+test('job titles are a frontend enum matching account types and employee requests omit removed/read-only fields', async () => {
+  const { JobTitle } = await server.ssrLoadModule('/src/types/employees.ts')
+  assert.deepEqual(Object.values(JobTitle), ['Nemployee', 'StockManager', 'StaffManager'])
+  assert.deepEqual(Object.keys(model.accountTypeLabels), Object.values(JobTitle))
+  for (const { profile } of model.loadEmployeeAccounts()) {
+    assert.equal(profile.role, profile.accountRole)
+    assert.ok(!Object.hasOwn(profile, 'department'))
+  }
+  const workspace = await server.ssrLoadModule('/src/api/workspace.ts')
+  const { api } = await server.ssrLoadModule('/src/api/client.ts')
+  const originalRequest = api.request
+  const input = { employeeId: 'QA-1', fullName: 'Test Employee', email: 'qa@example.test',
+    department: 'Must not be sent', role: 'Must not be sent', accountRole: JobTitle.Employee, password: 'Test-password' }
+  try {
+    api.request = async (path, options) => {
+      const body = JSON.parse(options.body)
+      assert.ok(!Object.hasOwn(body, 'department'))
+      assert.ok(!Object.hasOwn(body, 'role'))
+      if (path.endsWith('/employees')) assert.equal(body.accountRole, JobTitle.Employee)
+      return {}
+    }
+    await workspace.createEmployee(input)
+    await workspace.saveEmployee('employee-id', input)
   } finally { api.request = originalRequest }
 })

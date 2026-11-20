@@ -4,7 +4,7 @@ The React workspace connects to the .NET API at `/api/v1`. Login, employee profi
 
 ## Run locally
 
-Use Node.js 24 and the .NET 10 SDK. Follow [backend setup](../backend/README.md) to configure PostgreSQL, migrate it, and provision manager accounts. Apply migration `003_frontend_fields.sql` before starting this version; it adds departments, warehouse contact details, stock locations, and reorder levels.
+Use Node.js 24 and the .NET 10 SDK. Follow [backend setup](../backend/README.md) to configure PostgreSQL, apply all migrations through `006_remove_departments_and_sync_job_titles.sql`, and provision manager accounts. The frontend uses persisted warehouse contact details, stock locations, and reorder levels.
 
 From the repository root, start the backend:
 
@@ -40,7 +40,9 @@ Sign in with an account provisioned in the backend. Staff managers can open **Em
 
 These permissions follow the existing API policy; a manager does not automatically inherit normal employee stock permissions. The API enforces authorization independently of the UI.
 
-Active Staff Managers can open an account under **Employee accounts** and choose **Change account type** to switch it to Employee, Stock Manager, or Staff Manager. This includes existing manager accounts. The API checks the current actor's role, records the old and new account types with the editor, and revokes the affected account's sessions in one transaction. That account must sign in again, including when a Staff Manager changes their own type. Stock Managers and normal employees cannot use this action or call its API endpoint. Detail and password editing keeps its existing restriction to normal employee targets. Apply `005_account_type_edits.sql` with the backend migration command before using this feature, and redeploy both the frontend and backend.
+Active Staff Managers can open an account under **Employee accounts** and choose **Change job title / account type** to switch it to Employee, Stock Manager, or Staff Manager. Job title and account type stay synchronized; there is one dropdown and no free-text title input. This includes existing manager accounts. The API checks the current actor's role, records both changes with the editor, and revokes the affected account's sessions in one transaction. That account must sign in again, including when a Staff Manager changes their own type. Stock Managers and normal employees see read-only titles and cannot call the update endpoint. Detail and password editing keeps its existing restriction to normal employee targets.
+
+Departments are removed from forms, cards, search, API inputs/outputs, and the current database schema. Migration `006_remove_departments_and_sync_job_titles.sql` drops the department column and its audit values, removes audit entries that only changed a department, and preserves other edits and genuine password-only history. It replaces existing free-text job titles with an enum column generated from `account_role`, normalizing every title to the account's current type. Apply all pending migrations, then deploy the matching backend and frontend together; the previous backend still expects the removed columns. Job titles use the backend's `AccountRoles` enum and the frontend's matching `JobTitle` enum.
 
 New stock items receive a SKU automatically when saved; the stock form does not ask for one. The API generates a `GST-` prefix followed by the item's 32 uppercase hexadecimal ID characters, and PostgreSQL enforces SKU uniqueness across all warehouses, including archived items. Existing SKUs are preserved. API clients can still submit an explicit SKU; omitted, null, empty, or whitespace-only SKUs generate one automatically. No database migration is needed.
 

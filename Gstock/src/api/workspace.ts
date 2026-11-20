@@ -23,7 +23,7 @@ async function allPages<T>(path: string): Promise<T[]> {
 }
 
 const fields: Record<string, EmployeeField> = {
-  employee_id: 'employeeId', full_name: 'fullName', email: 'email', role: 'role', department: 'department', is_active: 'status', account_role: 'accountRole',
+  employee_id: 'employeeId', full_name: 'fullName', email: 'email', role: 'role', is_active: 'status', account_role: 'accountRole',
 }
 
 export async function loadEmployeeHistory(id: string): Promise<EmployeeEdit[]> {
@@ -69,15 +69,15 @@ export function loadCurrentEmployee() {
 }
 
 export function saveEmployee(id: string, details: EmployeeUpdate) {
-  const { employeeId, fullName, email, department, role, password } = details
+  const { employeeId, fullName, email, password } = details
   return api.request<ApiProfile>(`/employees/${encodeURIComponent(id)}`, {
-    ...jsonBody({ employeeId, fullName, email, department, role, ...(password ? { password } : {}) }), method: 'PATCH',
+    ...jsonBody({ employeeId, fullName, email, ...(password ? { password } : {}) }), method: 'PATCH',
   })
 }
 
 export function createEmployee(details: EmployeeCreate) {
-  const { employeeId, fullName, email, department, role, accountRole, password } = details
-  return api.request<ApiProfile>('/employees', jsonBody({ employeeId, fullName, email, department, role, accountRole, password }))
+  const { employeeId, fullName, email, accountRole, password } = details
+  return api.request<ApiProfile>('/employees', jsonBody({ employeeId, fullName, email, accountRole, password }))
 }
 
 export function changeEmployeeAccountType(id: string, accountRole: EmployeeAccountType) {

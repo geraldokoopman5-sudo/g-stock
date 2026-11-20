@@ -17,7 +17,7 @@ const pages = [
   { id: 'home', label: 'Home', description: 'Your employee card', icon: 'home' },
   { id: 'inventory', label: 'Inventory', description: 'Stock, products, and quantities', icon: 'inventory' },
   { id: 'warehouses', label: 'Warehouses', description: 'Warehouse locations, brands, and stock', icon: 'warehouses' },
-  { id: 'employees', label: 'Employee accounts', description: 'Your people and departments', icon: 'employees' },
+  { id: 'employees', label: 'Employee accounts', description: 'Your people and account types', icon: 'employees' },
 ] as const satisfies ReadonlyArray<{ id: string; label: string; description: string; icon: WorkspaceIconName }>
 
 function subscribeToPage(onChange: () => void) {

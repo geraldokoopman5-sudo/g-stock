@@ -2,10 +2,10 @@ import { demoEmployees } from './employees'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeDetails, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import { createPasswordVerifier, isPasswordVerifier } from './employeePasswords'
 
-export const employeeStorageKey = 'g-stock.employee-accounts.v1'
-export const employeeFields = ['employeeId', 'fullName', 'department', 'role', 'email'] as const satisfies readonly EmployeeField[]
+export const employeeStorageKey = 'g-stock.employee-accounts.v2'
+export const employeeFields = ['employeeId', 'fullName', 'email'] as const satisfies readonly EmployeeField[]
 export const employeeFieldLabels: Record<EmployeeField, string> = {
-  employeeId: 'Employee ID', fullName: 'Full name', department: 'Department', role: 'Role', email: 'Email address',
+  employeeId: 'Employee ID', fullName: 'Full name', role: 'Job title', email: 'Email address',
   status: 'Account status', accountRole: 'Account type',
 }
 
@@ -13,19 +13,16 @@ export const accountTypeLabels: Record<EmployeeAccountType, string> = {
   Nemployee: 'Employee', StockManager: 'Stock Manager', StaffManager: 'Staff Manager',
 }
 
+export function jobTitleLabel(value: string) {
+  return accountTypeLabels[value as EmployeeAccountType] ?? value
+}
+
 export function canChangeAccountType(employee: EmployeeProfile) {
   return employee.status === 'Active' && employee.accountRole === 'StaffManager'
 }
 
-export function isManager(employee: EmployeeProfile) {
-  return employee.role.trim().toLowerCase() === 'manager'
-}
-
-// Temporary preview policy. Restore this flag when manager-only editing is needed.
-export const restrictEmployeeEditingToManagers = false
 export function canEditEmployeeAccounts(employee: EmployeeProfile) {
-  if (employee.accountRole) return employee.status === 'Active' && employee.accountRole === 'StaffManager'
-  return !restrictEmployeeEditingToManagers || isManager(employee)
+  return canChangeAccountType(employee)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -35,6 +32,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isStoredAccount(value: unknown): value is EmployeeAccount {
   if (!isRecord(value) || !isRecord(value.profile) || !Array.isArray(value.editHistory)) return false
   const profile = value.profile
+  if (!Object.hasOwn(accountTypeLabels, String(profile.role)) || profile.role !== profile.accountRole) return false
   if (typeof profile.id !== 'string' || !profile.id || !employeeFields.every((key) => typeof profile[key] === 'string' && profile[key].trim())) return false
   if ('password' in profile) return false
   if (value.passwordVerifier !== undefined && !isPasswordVerifier(value.passwordVerifier)) return false
@@ -43,7 +41,7 @@ function isStoredAccount(value: unknown): value is EmployeeAccount {
     const editor = edit.editedBy
     if (edit.passwordChanged !== undefined && typeof edit.passwordChanged !== 'boolean') return false
     if (!isRecord(editor) || !['id', 'employeeId', 'fullName', 'role'].every((key) => typeof editor[key] === 'string')) return false
-    return Array.isArray(edit.changes) && edit.changes.every((change: unknown) => isRecord(change) && employeeFields.some((field) => field === change.field) && typeof change.before === 'string' && typeof change.after === 'string')
+    return Array.isArray(edit.changes) && edit.changes.every((change: unknown) => isRecord(change) && Object.hasOwn(employeeFieldLabels, String(change.field)) && typeof change.before === 'string' && typeof change.after === 'string')
   })
 }
 
@@ -63,20 +61,25 @@ export function loadEmployeeAccounts(): EmployeeAccount[] {
 
 type UpdateResult = { ok: true; accounts: EmployeeAccount[] } | { ok: false; error: string }
 
-/** Local preview policy; the editor must still be an existing employee account. */
+/** Preview data follows the same staff-only profile policy as the API. */
 export async function updateEmployeeAccount(accounts: EmployeeAccount[], actorId: string, targetId: string, draft: EmployeeUpdate): Promise<UpdateResult> {
   const actor = accounts.find((account) => account.profile.id === actorId)?.profile
   if (!actor) return { ok: false, error: 'Sign in to edit employee accounts.' }
-  if (!canEditEmployeeAccounts(actor)) return { ok: false, error: 'Only a manager can edit employee accounts.' }
+  if (!canEditEmployeeAccounts(actor)) return { ok: false, error: 'Only an active Staff Manager can edit employee accounts.' }
   const target = accounts.find((account) => account.profile.id === targetId)
   if (!target) return { ok: false, error: 'This employee account could not be found.' }
+  if (target.profile.accountRole !== 'Nemployee') return { ok: false, error: 'Only normal employee details can be edited.' }
+  if (('role' in draft && draft.role !== target.profile.role) ||
+      ('accountRole' in draft && draft.accountRole !== target.profile.accountRole)) {
+    return { ok: false, error: 'Job title is read-only. Use the account-type action to change it.' }
+  }
 
   // Explicitly select editable profile fields; credentials and internal IDs cannot enter the record.
   const details: EmployeeDetails = {
     employeeId: draft.employeeId.trim(), fullName: draft.fullName.trim(),
-    department: draft.department.trim(), role: draft.role.trim(), email: draft.email.trim(),
+    email: draft.email.trim(),
   }
-  const limits = { employeeId: 32, fullName: 100, department: 80, role: 80, email: 254 }
+  const limits = { employeeId: 32, fullName: 100, email: 254 }
   for (const field of employeeFields) {
     if (!details[field]) return { ok: false, error: `${employeeFieldLabels[field]} is required.` }
     if (details[field].length > limits[field]) return { ok: false, error: `${employeeFieldLabels[field]} is too long.` }

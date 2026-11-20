@@ -9,22 +9,27 @@ export interface User {
 
 export interface Employee extends User {
   employeeId: string
-  department: string
-  role: string
+  readonly role: JobTitle
   accountRole?: EmployeeAccountType
   status?: 'Active' | 'InActive'
 }
 
-export type EmployeeAccountType = 'Nemployee' | 'StockManager' | 'StaffManager'
+export enum JobTitle {
+  Employee = 'Nemployee',
+  StockManager = 'StockManager',
+  StaffManager = 'StaffManager',
+}
+
+export type EmployeeAccountType = `${JobTitle}`
 
 /** Only this password-free shape is used by the homepage and employee card. */
 export type EmployeeProfile = Omit<Employee, 'password'>
 export type UserCredentials = Pick<User, 'email' | 'password'>
 
-export type EmployeeDetails = Pick<EmployeeProfile, 'employeeId' | 'department' | 'role' | 'email' | 'fullName'>
+export type EmployeeDetails = Pick<EmployeeProfile, 'employeeId' | 'email' | 'fullName'>
 export type EmployeeUpdate = EmployeeDetails & { password?: string }
 export type EmployeeCreate = EmployeeDetails & { accountRole: NonNullable<EmployeeProfile['accountRole']>; password: string }
-export type EmployeeField = keyof EmployeeDetails | 'status' | 'accountRole'
+export type EmployeeField = keyof EmployeeDetails | 'status' | 'accountRole' | 'role'
 
 export interface EmployeeChange {
   field: EmployeeField
@@ -35,7 +40,7 @@ export interface EmployeeChange {
 export interface EmployeeEdit {
   id: string
   editedAt: string
-  editedBy: Pick<EmployeeProfile, 'id' | 'employeeId' | 'fullName' | 'role'>
+  editedBy: Pick<EmployeeProfile, 'id' | 'employeeId' | 'fullName'> & { role: string }
   changes: EmployeeChange[]
   passwordChanged?: boolean
 }

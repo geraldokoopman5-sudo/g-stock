@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { EmployeeCreate } from '../types/employees'
-import { employeeFieldLabels, employeeFields } from '../data/employeeAccounts'
+import { accountTypeLabels, employeeFieldLabels, employeeFields } from '../data/employeeAccounts'
 import './InventoryManagement.css'
 
 interface CreateEmployeeDialogProps {
@@ -48,8 +48,6 @@ export default function CreateEmployeeDialog({ onSave, onClose, onCreated }: Cre
           const details: EmployeeCreate = {
             employeeId: String(data.get('employeeId') ?? '').trim(),
             fullName: String(data.get('fullName') ?? '').trim(),
-            department: String(data.get('department') ?? '').trim(),
-            role: String(data.get('role') ?? '').trim(),
             email: String(data.get('email') ?? '').trim(),
             accountRole, password,
           }
@@ -67,18 +65,23 @@ export default function CreateEmployeeDialog({ onSave, onClose, onCreated }: Cre
           <fieldset className="stock-form__fields" disabled={saving}>
             {employeeFields.map((field) => (
               <div className="field" key={field}>
-                <label htmlFor={`${id}-${field}`}>{field === 'role' ? 'Job title' : employeeFieldLabels[field]}{field === 'department' && <span> (optional)</span>}</label>
-                <input id={`${id}-${field}`} name={field} type={field === 'email' ? 'email' : 'text'} required={field !== 'department'}
+                <label htmlFor={`${id}-${field}`}>{employeeFieldLabels[field]}</label>
+                <input id={`${id}-${field}`} name={field} type={field === 'email' ? 'email' : 'text'} required
                   autoComplete={field === 'email' ? 'off' : undefined}
                   maxLength={field === 'email' ? 254 : field === 'employeeId' ? 32 : field === 'fullName' ? 100 : 80} />
               </div>
             ))}
             <div className="field">
-              <label htmlFor={`${id}-account-type`}>Account type</label>
+              <label htmlFor={`${id}-account-type`}>Job title / account type</label>
               <select id={`${id}-account-type`} name="accountRole" value={accountRole} aria-describedby={`${id}-permissions`} onChange={(event) => setAccountRole(event.target.value as EmployeeCreate['accountRole'])}>
                 {accountTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
               </select>
               <p className="employee-create-dialog__hint" id={`${id}-permissions`}>{accountTypes.find((type) => type.value === accountRole)?.description}</p>
+            </div>
+            <div className="field">
+              <label htmlFor={`${id}-job-title`}>Job title</label>
+              <input id={`${id}-job-title`} value={accountTypeLabels[accountRole]} readOnly aria-describedby={`${id}-job-title-hint`} />
+              <p className="employee-create-dialog__hint" id={`${id}-job-title-hint`}>Job title follows the selected account type.</p>
             </div>
             <div className="field">
               <label htmlFor={`${id}-password`}>Password</label>

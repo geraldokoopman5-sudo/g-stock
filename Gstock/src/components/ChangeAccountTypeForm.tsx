@@ -29,10 +29,10 @@ export default function ChangeAccountTypeForm({ profile, viewer, onSave, onCance
         setError(errorMessage(error))
       } finally { setSaving(false) }
     }}>
-      <h2>Change account type</h2>
-      <p>Choose the access this account should have. The account will need to sign in again after the change.</p>
+      <h2>Change job title / account type</h2>
+      <p>Job title and account type stay the same. Choose the access this account should have. The account will need to sign in again after the change.</p>
       <div className="field">
-        <label htmlFor="change-account-type">Account type</label>
+        <label htmlFor="change-account-type">Job title / account type</label>
         <select ref={select} id="change-account-type" name="accountRole" value={accountRole} disabled={saving}
           onChange={event => { setAccountRole(event.target.value as EmployeeAccountType); setError('') }}>
           {(Object.entries(accountTypeLabels) as [EmployeeAccountType, string][]).map(([value, label]) => (

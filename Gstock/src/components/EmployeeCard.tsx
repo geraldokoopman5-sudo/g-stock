@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import type { EmployeeProfile } from '../types/employees'
+import { jobTitleLabel } from '../data/employeeAccounts'
 import ReflectiveCard from './ReflectiveCard'
 import { getThemeColors } from '../theme'
 import { useTheme } from '../hooks/useTheme'
@@ -38,8 +39,7 @@ export default function EmployeeCard({ employee }: { employee: EmployeeProfile }
           <h2 id={nameId}>{employee.fullName}</h2>
         </div>
         <dl className="employee-card__details">
-          <div><dt>Department</dt><dd>{employee.department || 'Not assigned'}</dd></div>
-          <div><dt>Role</dt><dd>{employee.role}</dd></div>
+          <div><dt>Job title</dt><dd>{jobTitleLabel(employee.role)}</dd></div>
           <div className="employee-card__email"><dt>Email address</dt><dd><a href={`mailto:${employee.email}`}>{employee.email}</a></dd></div>
         </dl>
         <footer className="employee-card__footer">

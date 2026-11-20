@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
-import { accountTypeLabels, canChangeAccountType, canEditEmployeeAccounts, employeeFieldLabels, employeeFields, restrictEmployeeEditingToManagers } from '../data/employeeAccounts'
+import { accountTypeLabels, canChangeAccountType, canEditEmployeeAccounts, employeeFieldLabels, employeeFields, jobTitleLabel } from '../data/employeeAccounts'
 import EmployeeCard from './EmployeeCard'
 import CreateEmployeeDialog from './CreateEmployeeDialog'
 import ChangeAccountTypeForm from './ChangeAccountTypeForm'
@@ -31,7 +31,7 @@ function EditEmployeeForm({ account, onSave, onCancel }: {
 }) {
   const [draft, setDraft] = useState<EmployeeDetails>(() => ({
     employeeId: account.profile.employeeId, fullName: account.profile.fullName,
-    department: account.profile.department, role: account.profile.role, email: account.profile.email,
+    email: account.profile.email,
   }))
   const [error, setError] = useState('')
   const [password, setPassword] = useState('')
@@ -68,6 +68,11 @@ function EditEmployeeForm({ account, onSave, onCancel }: {
           }} />
         </div>
       ))}
+      <div className="field">
+        <label htmlFor="edit-job-title">Job title</label>
+        <input id="edit-job-title" value={jobTitleLabel(account.profile.role)} readOnly aria-describedby="edit-job-title-hint" />
+        <p id="edit-job-title-hint" className="employee-editor__password-hint">Use Change job title / account type to update this value.</p>
+      </div>
       <div className="field">
         <label htmlFor="edit-password">New password</label>
         <input id="edit-password" type="password" autoComplete="new-password" value={password} minLength={8} maxLength={128} disabled={saving} aria-describedby="edit-password-hint" onChange={(event) => { setPassword(event.target.value); setError('') }} />
@@ -111,7 +116,7 @@ function EmployeeAccountDetail({ account, viewer, onSave, onChangeAccountType }:
         <div><p className="eyebrow">EMPLOYEE ACCOUNT</p><h1 ref={heading} id="employee-account-heading" tabIndex={-1}>{account.profile.fullName}</h1></div>
         <div className="employee-accounts__actions">
           {canEdit && !editing && !changingType && <button className="account-button" type="button" onClick={() => { setEditing(true); setSaved(false) }}>Edit</button>}
-          {canChangeType && !editing && !changingType && <button className="account-button" type="button" onClick={() => { setChangingType(true); setSaved(false) }}>Change account type</button>}
+          {canChangeType && !editing && !changingType && <button className="account-button" type="button" onClick={() => { setChangingType(true); setSaved(false) }}>Change job title / account type</button>}
         </div>
       </div>
       {saved && <p className="employee-accounts__saved" role="status">Changes saved. Edited by {latestEdit?.editedBy.fullName}.</p>}
@@ -145,10 +150,10 @@ function EmployeeAccountDetail({ account, viewer, onSave, onChangeAccountType }:
                   <ol>
                     {[...account.editHistory].reverse().map((edit) => (
                       <li key={edit.id}>
-                        <strong>{edit.editedBy.fullName}</strong><span>{edit.editedBy.role} · {edit.editedBy.employeeId}</span>
+                        <strong>{edit.editedBy.fullName}</strong><span>{jobTitleLabel(edit.editedBy.role)} · {edit.editedBy.employeeId}</span>
                         <time dateTime={edit.editedAt}>{dateFormat.format(new Date(edit.editedAt))} SAST</time>
                         <dl>{edit.changes.map((change) => (
-                          <div key={change.field}><dt>{employeeFieldLabels[change.field]}</dt><dd><span>{change.before}</span><span aria-hidden="true"> → </span><span className="employee-accounts__sr-only"> changed to </span><strong>{change.after}</strong></dd></div>
+                          <div key={change.field}><dt>{employeeFieldLabels[change.field]}</dt><dd><span>{change.field === 'role' || change.field === 'accountRole' ? jobTitleLabel(change.before) : change.before}</span><span aria-hidden="true"> → </span><span className="employee-accounts__sr-only"> changed to </span><strong>{change.field === 'role' || change.field === 'accountRole' ? jobTitleLabel(change.after) : change.after}</strong></dd></div>
                         ))}{edit.passwordChanged && <div><dt>Password</dt><dd>Password changed</dd></div>}</dl>
                       </li>
                     ))}
@@ -184,7 +189,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
   }, [selectedId, onOpen])
   const heading = useRef<HTMLHeadingElement>(null)
   const query = search.trim().toLowerCase()
-  const filtered = accounts.filter(({ profile }) => employeeFields.some((field) => profile[field].toLowerCase().includes(query)))
+  const filtered = accounts.filter(({ profile }) => [...employeeFields.map(field => profile[field]), jobTitleLabel(profile.role)].some(value => value.toLowerCase().includes(query)))
   const accountPages = usePagination(filtered, query)
   useEffect(() => { heading.current?.focus() }, [selectedId])
 
@@ -207,20 +212,18 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
       </div>
       <p className="workspace__description">Find an employee and open their card.</p>
       {createdName && <p className="employee-accounts__saved" role="status">Account created for {createdName}. They can now sign in.</p>}
-      <p className="employee-accounts__viewer">Viewing as <strong>{viewer.fullName}</strong> · {viewer.role}</p>
-      {!viewer.accountRole && !restrictEmployeeEditingToManagers && <p className="employee-accounts__viewer">All employee accounts can edit details and passwords during this preview.</p>}
+      <p className="employee-accounts__viewer">Viewing as <strong>{viewer.fullName}</strong> · {jobTitleLabel(viewer.role)}</p>
       <div className="employee-accounts__toolbar">
-        <div><label htmlFor="employee-search">Search employee accounts</label><input id="employee-search" type="search" placeholder="Name, ID, email, department, or role" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
+        <div><label htmlFor="employee-search">Search employee accounts</label><input id="employee-search" type="search" placeholder="Name, ID, email, or job title" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
         <p role="status">{filtered.length} {filtered.length === 1 ? 'account' : 'accounts'}</p>
       </div>
-      <div className="employee-accounts__columns" aria-hidden="true"><span>Employee</span><span>Department</span><span>Role</span><span /></div>
+      <div className="employee-accounts__columns" aria-hidden="true"><span>Employee</span><span>Job title</span><span /></div>
       <ul className="employee-accounts__list">
         {accountPages.items.map(({ profile }) => (
           <li key={profile.id}>
             <a href={`#employees/${encodeURIComponent(profile.id)}`}>
               <span className="employee-accounts__name"><strong>{profile.fullName}</strong><span>{profile.employeeId} · {profile.email}</span></span>
-              <span className="employee-accounts__department">{profile.department || 'Not assigned'}</span>
-              <span className="employee-accounts__role">{profile.role}</span>
+              <span className="employee-accounts__role">{jobTitleLabel(profile.role)}</span>
               <WorkspaceIcon name="arrow" size={18} />
             </a>
           </li>

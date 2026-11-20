@@ -64,7 +64,7 @@ test('empty and replenished catalogs show no alerts, and Explore exposes the ful
   assert.ok(renderAlerts({ warehouses: [], brands: [], items: [] }).includes('No stock alerts.'))
   const source = catalog()
   const renderWorkspace = (source) => renderToStaticMarkup(React.createElement(Workspace, {
-    employee: { id: 'viewer', employeeId: 'QA-1', fullName: 'Test Viewer', email: 'test@example.test', department: 'QA', role: 'Tester', accountRole: 'Nemployee', status: 'Active' },
+    employee: { id: 'viewer', employeeId: 'QA-1', fullName: 'Test Viewer', email: 'test@example.test', role: 'Nemployee', accountRole: 'Nemployee', status: 'Active' },
     accounts: [], inventory: { version: 2, catalog: source, activity: [] }, active: true,
     onInventoryAction: async () => ({ ok: false, error: 'Test only' }), onSaveEmployee: async () => null, onSignOut() {},
   }))

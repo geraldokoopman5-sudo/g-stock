@@ -46,8 +46,8 @@ internal static class ProvisionDevelopmentEmployee
 
         const string sql = """
             WITH new_employee AS (
-                INSERT INTO public.employees (id, employee_id, full_name, email, account_role, role)
-                VALUES (@id, @employee_number, @name, @email, CAST(@role AS public.account_role), @role)
+                INSERT INTO public.employees (id, employee_id, full_name, email, account_role)
+                VALUES (@id, @employee_number, @name, @email, CAST(@role AS public.account_role))
                 ON CONFLICT DO NOTHING
                 RETURNING id
             )

@@ -15,7 +15,7 @@
 .employee-accounts__toolbar input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); color: var(--color-text); font-size: 13px; }
 .employee-accounts__toolbar input::placeholder { color: var(--color-text-secondary); opacity: .8; }
 .employee-accounts__toolbar > p { flex: none; padding-bottom: 14px; color: var(--color-text-secondary); font-size: 12px; }
-.employee-accounts__columns, .employee-accounts__list a { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr) 20px; align-items: center; gap: 24px; padding: 14px 24px; }
+.employee-accounts__columns, .employee-accounts__list a { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) 20px; align-items: center; gap: 24px; padding: 14px 24px; }
 .employee-accounts__columns { color: var(--color-text-secondary); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .employee-accounts__list { list-style: none; padding: 0; margin: 0; border: 1px solid var(--color-border); border-radius: 16px; overflow: hidden; background: rgb(var(--color-surface-rgb) / 0.502); }
 .employee-accounts__list:empty { display: none; }
@@ -76,9 +76,8 @@
   .employee-accounts__columns { display: none; }
   .employee-accounts__list a { grid-template-columns: minmax(0, 1fr) 20px; gap: 12px 20px; padding: 20px; }
   .employee-accounts__name { grid-column: 1; }
-  .employee-accounts__department { grid-column: 1; color: var(--color-text-secondary); font-size: 12px; }
   .employee-accounts__role { grid-column: 1; }
-  .employee-accounts__list a > svg { grid-column: 2; grid-row: 1 / 4; }
+  .employee-accounts__list a > svg { grid-column: 2; grid-row: 1 / 3; }
 }
 @media (max-width: 400px) {
   .employee-accounts__toolbar { flex-direction: column; align-items: start; gap: 12px; }

@@ -11,19 +11,21 @@ namespace Gstock.Api.Modules.Employees.Application;
 internal sealed record EmployeeProfile(
     Guid Id, string EmployeeId, string FullName, string Email,
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles AccountRole,
-    string Role,
+    [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles Role,
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))] AccountStatus Status,
-    DateTime CreatedAt, DateTime UpdatedAt, string Department);
+    DateTime CreatedAt, DateTime UpdatedAt);
 
 internal sealed record CreateEmployeeInput(
     string? EmployeeId, string? FullName, string? Email,
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles? AccountRole,
-    string? Role, string? Password, string? Department = null);
+    string? Password,
+    [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles? Role = null);
 
 internal sealed record EditEmployeeInput(
-    string? EmployeeId, string? FullName, string? Email, string? Role,
+    string? EmployeeId, string? FullName, string? Email,
+    [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles? Role,
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))] AccountStatus? Status,
-    string? Password, string? Department = null);
+    string? Password);
 
 internal sealed record ChangeAccountTypeInput(
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles? AccountRole);
@@ -57,7 +59,8 @@ internal sealed class EmployeeService(
             }
             var updated = await repository.ChangeAccountTypeAsync(id, accountRole, transaction, ct);
             await repository.RecordEditAsync(id, actor,
-                [new EmployeeFieldChange("account_role", EmployeeRoleMapping.Write(before.AccountRole), EmployeeRoleMapping.Write(accountRole))],
+                [new EmployeeFieldChange("account_role", EmployeeRoleMapping.Write(before.AccountRole), EmployeeRoleMapping.Write(accountRole)),
+                 new EmployeeFieldChange("role", EmployeeRoleMapping.Write(before.Role), EmployeeRoleMapping.Write(updated.Role))],
                 transaction, ct);
             await repository.RevokeSessionsAsync(id, "admin", transaction, ct);
             return updated;
@@ -68,18 +71,21 @@ internal sealed class EmployeeService(
         var employeeId = ApiRequests.RequiredText(input.EmployeeId, "employeeId", 32);
         var name = ApiRequests.RequiredText(input.FullName, "fullName", 100);
         var email = Email(input.Email);
-        var role = ApiRequests.RequiredText(input.Role, "role", 80);
         var password = Password(input.Password);
         if (input.AccountRole is not { } accountRole || !Enum.IsDefined(accountRole))
         {
             throw ApiError.Invalid("accountRole", "Select a valid account role.");
         }
+        if (input.Role is { } title && title != accountRole)
+        {
+            throw ApiError.Invalid("role", "Job title must match the account type.");
+        }
 
         return database.RunAsync(async (transaction, ct) =>
         {
             await employees.RequireRoleAsync(actorId, AccountRoles.StaffManager, transaction, ct);
-            return await repository.InsertAsync(employeeId, name, email, role, accountRole,
-                Argon2idPasswordVerifier.Hash(password), ApiRequests.Text(input.Department ?? "", "department", 80), transaction, ct);
+            return await repository.InsertAsync(employeeId, name, email, accountRole,
+                Argon2idPasswordVerifier.Hash(password), transaction, ct);
         }, token);
     }
 
@@ -100,14 +106,16 @@ internal sealed class EmployeeService(
                 throw await repository.ExistsAsync(id, transaction, ct)
                     ? ApiError.Forbidden() : ApiError.Missing("Employee");
             }
+            if (input.Role is { } title && title != before.Role)
+            {
+                throw ApiError.Invalid("role", "Job title is read-only. Change the account type to update it.");
+            }
             var after = before with
             {
                 EmployeeId = input.EmployeeId is null ? before.EmployeeId : ApiRequests.RequiredText(input.EmployeeId, "employeeId", 32),
                 FullName = input.FullName is null ? before.FullName : ApiRequests.RequiredText(input.FullName, "fullName", 100),
                 Email = input.Email is null ? before.Email : Email(input.Email),
-                Role = input.Role is null ? before.Role : ApiRequests.RequiredText(input.Role, "role", 80),
-                Status = input.Status ?? before.Status,
-                Department = input.Department is null ? before.Department : ApiRequests.Text(input.Department, "department", 80)
+                Status = input.Status ?? before.Status
             };
             var changes = ProfileChanges(before, after);
             if (changes.Count == 0 && password is null)
@@ -139,8 +147,6 @@ internal sealed class EmployeeService(
         Add("employee_id", before.EmployeeId, after.EmployeeId);
         Add("full_name", before.FullName, after.FullName);
         Add("email", before.Email, after.Email);
-        Add("role", before.Role, after.Role);
-        Add("department", before.Department, after.Department);
         Add("is_active", before.Status == AccountStatus.Active ? "true" : "false",
             after.Status == AccountStatus.Active ? "true" : "false");
         return changes;
