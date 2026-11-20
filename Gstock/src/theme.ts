@@ -41,6 +41,19 @@ export function getThemeColors(mode: ThemeMode) {
   return mode === 'dark' ? darkThemeColors : themeColors
 }
 
+/** Shared by inline logos and the generated standalone SVG/favicon assets. */
+export function getLogoColors(mode: ThemeMode) {
+  const colors = getThemeColors(mode)
+  return {
+    top: mode === 'dark' ? colors.offWhite : colors.nordicBlue,
+    left: mode === 'dark' ? shade(colors.warmGrey, .65) : colors.strongBlue,
+    right: mode === 'dark' ? colors.warmGrey : colors.ink,
+    arrow: colors.nordicBlue,
+    accent: colors.nordicBlue,
+    wordmark: mode === 'dark' ? colors.offWhite : colors.ink,
+  }
+}
+
 export const themeStorageKey = 'g-stock.theme'
 const themeChangeEvent = 'g-stock:theme-change'
 
@@ -65,6 +78,11 @@ export function applyTheme(root: HTMLElement = document.documentElement, mode: T
   }
   root.dataset.theme = mode
   root.style.colorScheme = mode
+  for (const [name, hex] of Object.entries(getLogoColors(mode))) {
+    root.style.setProperty(`--logo-${name}`, hex)
+  }
+  const icon = root.ownerDocument?.querySelector<HTMLLinkElement>('link[rel="icon"]')
+  if (icon) icon.href = mode === 'dark' ? '/favicon-dark.svg' : '/favicon.svg'
 }
 
 export function setTheme(mode: ThemeMode): boolean {

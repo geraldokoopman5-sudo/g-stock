@@ -5,6 +5,7 @@ import ReflectiveCard from './ReflectiveCard'
 import { getThemeColors } from '../theme'
 import { useTheme } from '../hooks/useTheme'
 import './EmployeeCard.css'
+import BrandLogo from './BrandLogo'
 
 export default function EmployeeCard({ employee }: { employee: EmployeeProfile }) {
   const nameId = useId()
@@ -27,7 +28,7 @@ export default function EmployeeCard({ employee }: { employee: EmployeeProfile }
     >
       <article className="employee-card__profile" aria-labelledby={nameId}>
         <div className="employee-card__top">
-          <span className="employee-card__brand">G-Stock<span>.</span></span>
+          <BrandLogo className="brand-logo--card" />
           <span className="employee-card__badge">EMPLOYEE</span>
         </div>
         <div className="employee-card__portrait" aria-hidden="true">
@@ -44,7 +45,7 @@ export default function EmployeeCard({ employee }: { employee: EmployeeProfile }
         </dl>
         <footer className="employee-card__footer">
           <div><p className="employee-card__label">Employee ID</p><p className="employee-card__id">{employee.employeeId}</p></div>
-          <span className="employee-card__stamp" aria-hidden="true">GS</span>
+          <BrandLogo markOnly decorative />
         </footer>
       </article>
     </ReflectiveCard>

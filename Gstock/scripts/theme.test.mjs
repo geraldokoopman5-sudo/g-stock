@@ -20,15 +20,17 @@ function browser(saved) {
   const storage = new Map(saved ? [[theme.themeStorageKey, saved]] : [])
   const properties = new Map()
   const root = { dataset: {}, style: { setProperty: (key, value) => properties.set(key, value) } }
-  globalThis.document = { documentElement: root }
+  const favicon = { href: '/favicon.svg' }
+  globalThis.document = { documentElement: root, querySelector: () => favicon }
+  root.ownerDocument = document
   globalThis.window = Object.assign(new EventTarget(), {
     localStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
   })
-  return { root, storage, properties }
+  return { root, storage, properties, favicon }
 }
 
 test('a saved dark preference applies at startup and switching back to light survives reload', () => {
-  const { root, storage, properties } = browser('dark')
+  const { root, storage, properties, favicon } = browser('dark')
   theme.applyTheme()
   assert.equal(theme.getTheme(), 'dark')
   assert.equal(root.style.colorScheme, 'dark')
@@ -37,10 +39,14 @@ test('a saved dark preference applies at startup and switching back to light sur
   assert.equal(properties.get('--color-nordic-blue'), '#ececec')
   assert.equal(properties.get('--color-off-white'), '#f9f9f9')
   assert.equal(properties.get('--color-strong-blue-rgb'), '40 40 40')
+  assert.equal(favicon.href, '/favicon-dark.svg')
+  assert.equal(properties.get('--logo-wordmark'), '#f9f9f9')
   assert.equal(theme.setTheme('light'), true)
   assert.equal(theme.getTheme(), 'light')
   assert.equal(root.style.colorScheme, 'light')
   assert.equal(properties.get('--color-nordic-blue'), '#3771c8')
+  assert.equal(favicon.href, '/favicon.svg')
+  assert.equal(properties.get('--logo-accent'), '#3771c8')
   assert.equal(storage.get(theme.themeStorageKey), 'light')
   root.dataset.theme = 'dark'
   theme.applyTheme()

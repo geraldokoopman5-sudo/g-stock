@@ -49,6 +49,7 @@
   animation: brand-float 2400ms 2750ms ease-in-out infinite;
 }
 .login-transition__wordmark span { color: var(--color-accent-text); }
+.login-transition__wordmark .brand-logo { width: clamp(220px, 65vw, 560px); margin: auto; }
 .login-transition__caption { margin-top: 24px; color: var(--color-text-secondary); font-size: 13px; letter-spacing: .08em; }
 .login-transition__skip {
   position: absolute;
@@ -70,6 +71,7 @@
 .login-transition--logout .login-transition__eyebrow { color: var(--color-off-white); }
 .login-transition--logout .login-transition__wordmark span { color: var(--color-mist-blue); }
 .login-transition--logout .login-transition__wordmark { color: var(--color-off-white); text-shadow: 0 0 40px rgb(var(--color-mist-blue-rgb) / .3), 0 8px 50px var(--color-strong-blue); }
+.login-transition--logout .brand-logo { --logo-top: var(--color-off-white); --logo-left: var(--color-mist-blue); --logo-right: var(--color-off-white); --logo-arrow: var(--color-off-white); --logo-accent: var(--color-off-white); --logo-wordmark: var(--color-off-white); }
 .login-transition--logout .login-transition__caption { color: var(--color-off-white); }
 .login-transition--logout .login-transition__skip { background: rgb(var(--color-ink-rgb) / .15); border-color: rgb(var(--color-off-white-rgb) / .5); color: var(--color-off-white); }
 .login-transition--logout .login-transition__skip:hover { background: rgb(var(--color-ink-rgb) / .3); border-color: var(--color-off-white); }

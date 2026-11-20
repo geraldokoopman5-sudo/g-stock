@@ -3,6 +3,7 @@ import LightTunnel from './LightTunnel'
 import { getThemeColors } from '../theme'
 import { useTheme } from '../hooks/useTheme'
 import './LoginTransition.css'
+import BrandLogo from './BrandLogo'
 
 const motionQuery = '(prefers-reduced-motion: reduce)'
 
@@ -65,7 +66,7 @@ export default function LoginTransition({ onComplete, mode = 'login' }: LoginTra
       </div>
       <div className="login-transition__brand">
         <span className="login-transition__eyebrow" aria-hidden="true">YOUR OPERATIONS, CONNECTED</span>
-        <h1 className="login-transition__wordmark">G-Stock<span aria-hidden="true">.</span></h1>
+        <h1 className="login-transition__wordmark"><BrandLogo /></h1>
         <p className="login-transition__caption" role="status">{isLoggingOut ? 'Signing you out' : 'Opening your workspace'}</p>
       </div>
       <button type="button" className="login-transition__skip" onClick={onComplete}>

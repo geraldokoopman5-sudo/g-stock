@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import LoginTransition from './components/LoginTransition'
 import Workspace from './components/Workspace'
 import ThemeToggle from './components/ThemeToggle'
+import BrandLogo from './components/BrandLogo'
 import { api, ApiError, errorMessage } from './api/client'
 import { changeEmployeeAccountType, createEmployee as createApiEmployee, loadAccounts, loadCurrentEmployee, loadEmployeeHistory, loadInventory, loadInventoryCatalog, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from './types/employees'
@@ -190,18 +191,17 @@ function App() {
           <section className="welcome" aria-label="G-Stock workspace">
             <div className="welcome__header">
               <a className="brand" href="./" aria-label="G-Stock home">
-                <span className="brand-mark" aria-hidden="true">G</span>
-                <span>G-Stock</span>
+                <BrandLogo decorative />
               </a>
               <ThemeToggle />
             </div>
             <div className="welcome-content">
               <p className="eyebrow">YOUR OPERATIONS, CONNECTED</p>
               <h1>Everything<br />in its place.</h1>
-              <div className="monogram" aria-hidden="true">GS</div>
+              <BrandLogo markOnly decorative className="brand-logo--hero" />
               <p className="welcome-description">Stay on top of stock.<br />Keep your warehouse moving.</p>
             </div>
-            <footer>G-Stock <span aria-hidden="true">·</span> Staff workspace</footer>
+            <footer><BrandLogo className="brand-logo--footer" /><span>Staff workspace</span></footer>
           </section>
 
           <main className="login-card">

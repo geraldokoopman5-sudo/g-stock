@@ -81,6 +81,8 @@ After deploying, sign in with a persisted employee, reload the page to verify se
 
 ## Checks
 
+The shared `BrandLogo` SVG recreates the supplied box-and-arrow mark and lowercase wordmark. Headers, employee cards, login/logout transitions, decorative marks, and footers use this component. Its colours follow the application theme, including the neutral dark palette. The favicon follows the selected application theme too. After editing the mark or logo palette, run `npm.cmd run generate:brand` to regenerate the standalone light/dark SVG logos and favicons in `public` from the same source.
+
 ```powershell
 npm.cmd run build
 npm.cmd run lint

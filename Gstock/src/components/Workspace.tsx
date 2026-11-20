@@ -5,6 +5,7 @@ import EmployeeAccounts from './EmployeeAccounts'
 import Inventory from './Inventory'
 import Warehouses from './Warehouses'
 import ThemeToggle from './ThemeToggle'
+import BrandLogo from './BrandLogo'
 import StockAlerts from './StockAlerts'
 import { getStockAlerts } from '../data/inventory'
 import type { InventoryState, SaveInventoryAction } from '../types/inventory'
@@ -95,7 +96,7 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
     <div className="workspace" inert={!active}>
       <header className="workspace__header">
         <a className="brand" href="#home" aria-label="G-Stock home">
-          <span className="brand-mark" aria-hidden="true">G</span><span>G-Stock</span>
+          <BrandLogo decorative />
         </a>
         <ThemeToggle />
       </header>
@@ -121,7 +122,7 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
           <Warehouses selectedId={selectedId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} permissions={permissions} />
         )}
       </main>
-      <footer className="workspace__footer"><span>G-Stock · Staff workspace</span><span>Everything in its place.</span></footer>
+      <footer className="workspace__footer"><span className="workspace__footer-brand"><BrandLogo className="brand-logo--footer" />Staff workspace</span><span>Everything in its place.</span></footer>
       <div className="workspace-navigation" ref={navigationRef}>
         {navigationOpen && (
           <nav className="workspace-navigation__panel" id="workspace-navigation" aria-label="Workspace pages">
