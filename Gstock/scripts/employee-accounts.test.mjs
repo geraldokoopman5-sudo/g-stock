@@ -323,7 +323,7 @@ test('workspace loading skips employee data for normal employees and keeps manag
       const profile = { ...employee, role: accountRole, accountRole, status: 'Active' }
       api.request = async path => {
         calls.push(path)
-        if (path === '/auth/me') return { profile, permissions: { canViewEmployees: allowed } }
+        if (path === '/auth/me') return { profile, permissions: { canManageEmployees: accountRole === 'StaffManager' } }
         if (path.startsWith('/employees')) {
           assert.ok(allowed, 'Normal employee login must not fetch the directory')
           return [profile]
@@ -336,11 +336,5 @@ test('workspace loading skips employee data for normal employees and keeps manag
       assert.equal(calls.some(path => path.startsWith('/employees')), allowed)
       assert.ok(calls.includes('/auth/me'))
     }
-    api.request = async path => {
-      if (path === '/auth/me') return { profile: { ...employee, accountRole: 'StaffManager' }, permissions: { canViewEmployees: false } }
-      assert.ok(!path.startsWith('/employees'), 'Respect a server denial even for a manager profile')
-      return []
-    }
-    assert.deepEqual((await workspace.loadWorkspaceData()).accounts, [])
   } finally { api.request = originalRequest }
 })

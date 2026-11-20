@@ -31,8 +31,6 @@ Migration `006_remove_departments_and_sync_job_titles.sql` removes the employee 
 
 ## Run the integrated frontend
 
-The employee-directory GET endpoints (`/api/v1/employees`, `/{id}`, and `/{id}/edits`) check the current database role and are available only to active Stock Managers and Staff Managers. Normal employees receive `403`, including for direct URLs and their own ID in the directory. `/api/v1/auth/me` continues to supply their own profile and advertises `canViewEmployees: false`. Account changes remain Staff Manager-only.
-
 Start the API with the `http` launch profile (`http://localhost:5268`), then run `npm.cmd ci` and `npm.cmd run dev` from `Gstock`. Open Vite's **localhost** URL. Its `/api` proxy preserves the browser origin, allowing the existing same-origin and CSRF protections to work without enabling CORS. See the [workspace README](../Gstock/README.md) for role permissions, session behavior, and deployment setup.
 
 ## Create development accounts

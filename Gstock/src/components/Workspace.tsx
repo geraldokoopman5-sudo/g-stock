@@ -53,9 +53,8 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
     canManageBrands: !employee.accountRole || employee.accountRole === 'StockManager',
     canManageItems: !employee.accountRole || employee.accountRole === 'Nemployee',
     canManageEmployees: employee.accountRole === 'StaffManager',
-    canViewEmployees: canViewEmployeeAccounts(employee),
   }
-  const canViewEmployees = canViewEmployeeAccounts(employee) && permissions.canViewEmployees !== false
+  const canViewEmployees = canViewEmployeeAccounts(employee)
   const visiblePages = pages.filter(destination => destination.id !== 'employees' || canViewEmployees)
   const route = useSyncExternalStore(subscribeToPage, currentPage, () => '#home')
   const [routePage, selectedId, selectedItemId] = route.slice(1).split('/')

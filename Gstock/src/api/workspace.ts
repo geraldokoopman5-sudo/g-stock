@@ -8,7 +8,6 @@ export interface WorkspacePermissions {
   canManageBrands: boolean
   canManageItems: boolean
   canManageEmployees: boolean
-  canViewEmployees: boolean
 }
 
 type ApiProfile = EmployeeProfile & { accountRole: 'Nemployee' | 'StockManager' | 'StaffManager'; status: 'Active' | 'InActive' }
@@ -73,7 +72,7 @@ export function loadCurrentEmployee() {
 export async function loadWorkspaceData() {
   const current = await loadCurrentEmployee()
   const [accounts, inventory] = await Promise.all([
-    canViewEmployeeAccounts(current.profile) && current.permissions.canViewEmployees !== false ? loadAccounts() : Promise.resolve([]),
+    canViewEmployeeAccounts(current.profile) ? loadAccounts() : Promise.resolve([]),
     loadInventory(),
   ])
   return { current, accounts, inventory }
