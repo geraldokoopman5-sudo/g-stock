@@ -25,6 +25,8 @@ The integrated frontend requires `003_frontend_fields.sql`. This additive migrat
 
 Picture uploads also require `004_inventory_photos.sql`. It adds optional item picture bytes and picture-update timestamps for items and brands, reusing the existing brand `profile_photo` field. The normal migration command above applies both migrations. PNG and JPEG uploads are limited to 1 MiB. `profilePhoto` is a base64 string in create and `PUT /api/v1/{brands|items}/{id}/photo` requests; null removes a picture on PUT. Stock managers manage brand pictures, normal employees manage item pictures, and all signed-in accounts can read them through the corresponding GET endpoint.
 
+Account-type changes require `005_account_type_edits.sql`, which adds `account_role` to the permitted employee audit fields. Apply pending migrations before deploying the feature. `PATCH /api/v1/employees/{id}/account-type` accepts `{ "accountRole": "Nemployee" | "StockManager" | "StaffManager" }`. Only an active Staff Manager can call it, for any account including their own. The role update, audit entry, and revocation of all target sessions commit together. The target signs in again to use its new permissions. The existing profile/password PATCH remains restricted to normal employee targets.
+
 ## Run the integrated frontend
 
 Start the API with the `http` launch profile (`http://localhost:5268`), then run `npm.cmd ci` and `npm.cmd run dev` from `Gstock`. Open Vite's **localhost** URL. Its `/api` proxy preserves the browser origin, allowing the existing same-origin and CSRF protections to work without enabling CORS. See the [workspace README](../Gstock/README.md) for role permissions, session behavior, and deployment setup.
@@ -54,3 +56,11 @@ pwsh -NoProfile -File .\backend\scripts\Test-DevelopmentBackend.ps1
 ```
 
 The test checks the permissions for all three account roles, warehouse and catalogue operations, stock validation and activity, account edits, refresh, and logout. It uses the local HTTPS endpoint so the refresh cookie can be sent. It leaves sample warehouses and activity in the development database, archives the sample catalogue entries, and deactivates its sample employee.
+
+For an isolated account-type integration check, run from the repository root:
+
+```powershell
+node backend/scripts/test-account-types.mjs
+```
+
+This requires Node.js 24, .NET 10, and PostgreSQL binaries (by default `C:/Program Files/PostgreSQL/18/bin`; override with `GSTOCK_POSTGRES_BIN`). It builds the API, creates a disposable local PostgreSQL cluster, applies every migration, and starts the API with generated test JWT keys and test sessions. It checks denied actors, validation, all account types, persistence, audit entries, permission updates, session revocation, and self-demotion. It stops the processes and removes its temporary database afterward. It does not use configured development or hosted database credentials.

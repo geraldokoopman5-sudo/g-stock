@@ -1,5 +1,5 @@
 import { api, jsonBody } from './client'
-import type { EmployeeAccount, EmployeeCreate, EmployeeEdit, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
+import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeEdit, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import type { InventoryAction, InventoryActivity, InventoryBrand, InventoryCatalog, InventoryItem, InventoryState, InventoryWarehouse } from '../types/inventory'
 
 export interface WorkspacePermissions {
@@ -23,7 +23,7 @@ async function allPages<T>(path: string): Promise<T[]> {
 }
 
 const fields: Record<string, EmployeeField> = {
-  employee_id: 'employeeId', full_name: 'fullName', email: 'email', role: 'role', department: 'department', is_active: 'status',
+  employee_id: 'employeeId', full_name: 'fullName', email: 'email', role: 'role', department: 'department', is_active: 'status', account_role: 'accountRole',
 }
 
 export async function loadEmployeeHistory(id: string): Promise<EmployeeEdit[]> {
@@ -78,6 +78,12 @@ export function saveEmployee(id: string, details: EmployeeUpdate) {
 export function createEmployee(details: EmployeeCreate) {
   const { employeeId, fullName, email, department, role, accountRole, password } = details
   return api.request<ApiProfile>('/employees', jsonBody({ employeeId, fullName, email, department, role, accountRole, password }))
+}
+
+export function changeEmployeeAccountType(id: string, accountRole: EmployeeAccountType) {
+  return api.request<ApiProfile>(`/employees/${encodeURIComponent(id)}/account-type`, {
+    ...jsonBody({ accountRole }), method: 'PATCH',
+  })
 }
 
 export async function saveInventory(action: InventoryAction) {

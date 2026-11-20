@@ -25,6 +25,9 @@ internal sealed record EditEmployeeInput(
     [property: JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))] AccountStatus? Status,
     string? Password, string? Department = null);
 
+internal sealed record ChangeAccountTypeInput(
+    [property: JsonConverter(typeof(JsonStringEnumConverter<AccountRoles>))] AccountRoles? AccountRole);
+
 internal sealed record EmployeeFieldChange(string Field, string Before, string After);
 internal sealed record EmployeeEditor(Guid Id, string EmployeeId, string FullName, string Role);
 
@@ -37,6 +40,29 @@ internal sealed record EmployeeEditEntry(Guid Id, DateTime EditedAt, EmployeeEdi
 internal sealed class EmployeeService(
     PostgresEmployeeRepository repository, IEmployeeDirectory employees, PostgresUnitOfWork database)
 {
+    public Task<EmployeeProfile> ChangeAccountTypeAsync(
+        Guid id, ChangeAccountTypeInput input, Guid actorId, CancellationToken token) =>
+        database.RunAsync(async (transaction, ct) =>
+        {
+            var actor = await employees.RequireRoleAsync(actorId, AccountRoles.StaffManager, transaction, ct);
+            if (input.AccountRole is not { } accountRole || !Enum.IsDefined(accountRole))
+            {
+                throw ApiError.Invalid("accountRole", "Select a valid account type.");
+            }
+            var before = await repository.LockAsync(id, transaction, ct, normalEmployeeOnly: false)
+                ?? throw ApiError.Missing("Employee");
+            if (before.AccountRole == accountRole)
+            {
+                throw ApiError.Invalid("accountRole", "Select a different account type.");
+            }
+            var updated = await repository.ChangeAccountTypeAsync(id, accountRole, transaction, ct);
+            await repository.RecordEditAsync(id, actor,
+                [new EmployeeFieldChange("account_role", EmployeeRoleMapping.Write(before.AccountRole), EmployeeRoleMapping.Write(accountRole))],
+                transaction, ct);
+            await repository.RevokeSessionsAsync(id, "admin", transaction, ct);
+            return updated;
+        }, token);
+
     public Task<EmployeeProfile> CreateAsync(CreateEmployeeInput input, Guid actorId, CancellationToken token)
     {
         var employeeId = ApiRequests.RequiredText(input.EmployeeId, "employeeId", 32);

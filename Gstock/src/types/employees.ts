@@ -11,9 +11,11 @@ export interface Employee extends User {
   employeeId: string
   department: string
   role: string
-  accountRole?: 'Nemployee' | 'StockManager' | 'StaffManager'
+  accountRole?: EmployeeAccountType
   status?: 'Active' | 'InActive'
 }
+
+export type EmployeeAccountType = 'Nemployee' | 'StockManager' | 'StaffManager'
 
 /** Only this password-free shape is used by the homepage and employee card. */
 export type EmployeeProfile = Omit<Employee, 'password'>
@@ -22,7 +24,7 @@ export type UserCredentials = Pick<User, 'email' | 'password'>
 export type EmployeeDetails = Pick<EmployeeProfile, 'employeeId' | 'department' | 'role' | 'email' | 'fullName'>
 export type EmployeeUpdate = EmployeeDetails & { password?: string }
 export type EmployeeCreate = EmployeeDetails & { accountRole: NonNullable<EmployeeProfile['accountRole']>; password: string }
-export type EmployeeField = keyof EmployeeDetails | 'status'
+export type EmployeeField = keyof EmployeeDetails | 'status' | 'accountRole'
 
 export interface EmployeeChange {
   field: EmployeeField

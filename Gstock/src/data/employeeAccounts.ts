@@ -1,12 +1,20 @@
 import { demoEmployees } from './employees'
-import type { EmployeeAccount, EmployeeDetails, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
+import type { EmployeeAccount, EmployeeAccountType, EmployeeDetails, EmployeeField, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import { createPasswordVerifier, isPasswordVerifier } from './employeePasswords'
 
 export const employeeStorageKey = 'g-stock.employee-accounts.v1'
 export const employeeFields = ['employeeId', 'fullName', 'department', 'role', 'email'] as const satisfies readonly EmployeeField[]
 export const employeeFieldLabels: Record<EmployeeField, string> = {
   employeeId: 'Employee ID', fullName: 'Full name', department: 'Department', role: 'Role', email: 'Email address',
-  status: 'Account status',
+  status: 'Account status', accountRole: 'Account type',
+}
+
+export const accountTypeLabels: Record<EmployeeAccountType, string> = {
+  Nemployee: 'Employee', StockManager: 'Stock Manager', StaffManager: 'Staff Manager',
+}
+
+export function canChangeAccountType(employee: EmployeeProfile) {
+  return employee.status === 'Active' && employee.accountRole === 'StaffManager'
 }
 
 export function isManager(employee: EmployeeProfile) {

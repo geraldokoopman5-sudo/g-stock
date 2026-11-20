@@ -33,6 +33,9 @@ internal static class EmployeeEndpoints
         routes.MapPatch("/{id:guid}", async (Guid id, EditEmployeeInput input, ClaimsPrincipal user,
             [FromServices] EmployeeService employees, CancellationToken token) =>
             Results.Ok(await employees.EditAsync(id, input, user.EmployeeId(), token)));
+        routes.MapPatch("/{id:guid}/account-type", async (Guid id, ChangeAccountTypeInput input, ClaimsPrincipal user,
+            [FromServices] EmployeeService employees, CancellationToken token) =>
+            Results.Ok(await employees.ChangeAccountTypeAsync(id, input, user.EmployeeId(), token)));
     }
 
     internal static async Task<EmployeeProfile> FindAsync(

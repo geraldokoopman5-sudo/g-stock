@@ -34,10 +34,11 @@ internal sealed class PostgresEmployeeRepository(NpgsqlDataSource source)
         return employees;
     }
 
-    public async Task<EmployeeProfile?> LockAsync(Guid id, DbTransaction transaction, CancellationToken token)
+    public async Task<EmployeeProfile?> LockAsync(Guid id, DbTransaction transaction, CancellationToken token,
+        bool normalEmployeeOnly = true)
     {
-        const string sql = $"SELECT {Columns} FROM public.employees WHERE id = @id AND account_role = 'Nemployee' FOR NO KEY UPDATE;";
-        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id);
+        const string sql = $"SELECT {Columns} FROM public.employees WHERE id = @id AND (NOT @normal_only OR account_role = 'Nemployee') FOR NO KEY UPDATE;";
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id).Bind("normal_only", normalEmployeeOnly);
         await using var reader = await command.ExecuteReaderAsync(token);
         return await reader.ReadAsync(token) ? ReadProfile(reader) : null;
     }
@@ -85,6 +86,24 @@ internal sealed class PostgresEmployeeRepository(NpgsqlDataSource source)
         await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", changed.Id)
             .Bind("number", changed.EmployeeId).Bind("name", changed.FullName).Bind("email", changed.Email)
             .Bind("role", changed.Role).Bind("active", changed.Status == AccountStatus.Active).Bind("department", changed.Department);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token))
+        {
+            throw new InvalidOperationException("PostgreSQL did not return the updated employee.");
+        }
+        return ReadProfile(reader);
+    }
+
+    public async Task<EmployeeProfile> ChangeAccountTypeAsync(Guid id, AccountRoles accountRole,
+        DbTransaction transaction, CancellationToken token)
+    {
+        const string sql = $"""
+            UPDATE public.employees SET account_role = CAST(@account_role AS public.account_role),
+                updated_at = clock_timestamp() WHERE id = @id
+            RETURNING {Columns};
+            """;
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id)
+            .Bind("account_role", EmployeeRoleMapping.Write(accountRole));
         await using var reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token))
         {

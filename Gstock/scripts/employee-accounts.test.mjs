@@ -209,3 +209,57 @@ test('account creation form offers every account type and requires confirmed new
   }
   assert.ok(!input('department').includes('required'))
 })
+
+test('only active staff managers can change account types, including manager accounts', () => {
+  const { accounts, manager, employee } = scenario()
+  const staff = { ...manager, accountRole: 'StaffManager', status: 'Active' }
+  for (const accountRole of ['Nemployee', 'StockManager', 'StaffManager']) {
+    const target = { ...employee, accountRole, status: 'Active' }
+    const render = viewer => renderToStaticMarkup(React.createElement(EmployeeAccounts, {
+      accounts: [{ ...accounts[0], profile: target }], viewer, selectedId: target.id,
+      onSave: async () => null, onChangeAccountType: async () => null,
+    }))
+    assert.ok(render(staff).includes('>Change account type</button>'))
+    for (const viewer of [employee, { ...staff, status: 'InActive' },
+      { ...staff, accountRole: 'StockManager' }, { ...staff, accountRole: 'Nemployee' }]) {
+      assert.ok(!render(viewer).includes('>Change account type</button>'))
+    }
+  }
+})
+
+test('account type form offers all types only to staff managers and prevents unchanged saves', async () => {
+  const ChangeAccountTypeForm = (await server.ssrLoadModule('/src/components/ChangeAccountTypeForm.tsx')).default
+  const { manager, employee } = scenario()
+  const staff = { ...manager, accountRole: 'StaffManager', status: 'Active' }
+  const profile = { ...employee, accountRole: 'StockManager', status: 'Active' }
+  const render = viewer => renderToStaticMarkup(React.createElement(ChangeAccountTypeForm, {
+    profile, viewer, onSave: async () => null, onCancel() {},
+  }))
+  const markup = render(staff)
+  for (const role of ['Nemployee', 'StockManager', 'StaffManager']) assert.ok(markup.includes(`value="${role}"`))
+  assert.match(markup, /value="StockManager" selected=""/)
+  assert.match(markup, /type="submit" disabled=""/)
+  assert.ok(markup.includes('sign in again'))
+  for (const viewer of [employee, { ...staff, status: 'InActive' }, { ...staff, accountRole: 'StockManager' }]) {
+    assert.equal(render(viewer), '')
+  }
+})
+
+test('account-type API sends only the selected type and maps account-type audit history', async () => {
+  const workspace = await server.ssrLoadModule('/src/api/workspace.ts')
+  const { api } = await server.ssrLoadModule('/src/api/client.ts')
+  const originalRequest = api.request
+  try {
+    api.request = async (path, options) => {
+      assert.equal(path, '/employees/employee%2Fid/account-type')
+      assert.equal(options.method, 'PATCH')
+      assert.deepEqual(JSON.parse(options.body), { accountRole: 'StaffManager' })
+      return { accountRole: 'StaffManager' }
+    }
+    assert.equal((await workspace.changeEmployeeAccountType('employee/id', 'StaffManager')).accountRole, 'StaffManager')
+    api.request = async () => [{ kind: 'profile-edited', changes: [{ field: 'account_role', before: 'Nemployee', after: 'Staff Manager' }] }]
+    const history = await workspace.loadEmployeeHistory('employee/id')
+    assert.equal(history[0].changes[0].field, 'accountRole')
+    assert.equal(model.employeeFieldLabels[history[0].changes[0].field], 'Account type')
+  } finally { api.request = originalRequest }
+})

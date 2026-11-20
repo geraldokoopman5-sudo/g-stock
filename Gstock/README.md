@@ -36,9 +36,11 @@ Sign in with an account provisioned in the backend. Staff managers can open **Em
 | --- | --- |
 | StockManager | Create warehouses and brands |
 | Nemployee | Create warehouses and items, and adjust quantities |
-| StaffManager | Create accounts of all types; edit normal employee accounts and passwords; cannot create warehouses |
+| StaffManager | Create accounts of all types; change any account's type; edit normal employee accounts and passwords; cannot create warehouses |
 
 These permissions follow the existing API policy; a manager does not automatically inherit normal employee stock permissions. The API enforces authorization independently of the UI.
+
+Active Staff Managers can open an account under **Employee accounts** and choose **Change account type** to switch it to Employee, Stock Manager, or Staff Manager. This includes existing manager accounts. The API checks the current actor's role, records the old and new account types with the editor, and revokes the affected account's sessions in one transaction. That account must sign in again, including when a Staff Manager changes their own type. Stock Managers and normal employees cannot use this action or call its API endpoint. Detail and password editing keeps its existing restriction to normal employee targets. Apply `005_account_type_edits.sql` with the backend migration command before using this feature, and redeploy both the frontend and backend.
 
 New stock items receive a SKU automatically when saved; the stock form does not ask for one. The API generates a `GST-` prefix followed by the item's 32 uppercase hexadecimal ID characters, and PostgreSQL enforces SKU uniqueness across all warehouses, including archived items. Existing SKUs are preserved. API clients can still submit an explicit SKU; omitted, null, empty, or whitespace-only SKUs generate one automatically. No database migration is needed.
 

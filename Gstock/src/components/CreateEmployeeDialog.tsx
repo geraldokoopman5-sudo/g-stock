@@ -12,7 +12,7 @@ interface CreateEmployeeDialogProps {
 const accountTypes = [
   { value: 'Nemployee', label: 'Employee', description: 'Create warehouses, add stock items, and update stock quantities.' },
   { value: 'StockManager', label: 'Stock Manager', description: 'Create warehouses and manage brands.' },
-  { value: 'StaffManager', label: 'Staff Manager', description: 'Create accounts of any type and edit normal employee accounts. Cannot create warehouses.' },
+  { value: 'StaffManager', label: 'Staff Manager', description: 'Create accounts, change account types, and edit normal employee details. Cannot create warehouses.' },
 ] as const
 
 export default function CreateEmployeeDialog({ onSave, onClose, onCreated }: CreateEmployeeDialogProps) {

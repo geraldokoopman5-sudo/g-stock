@@ -3,8 +3,8 @@ import LoginTransition from './components/LoginTransition'
 import Workspace from './components/Workspace'
 import ThemeToggle from './components/ThemeToggle'
 import { api, ApiError, errorMessage } from './api/client'
-import { createEmployee as createApiEmployee, loadAccounts, loadCurrentEmployee, loadEmployeeHistory, loadInventory, loadInventoryCatalog, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
-import type { EmployeeAccount, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from './types/employees'
+import { changeEmployeeAccountType, createEmployee as createApiEmployee, loadAccounts, loadCurrentEmployee, loadEmployeeHistory, loadInventory, loadInventoryCatalog, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
+import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from './types/employees'
 import type { InventoryAction, InventoryBrand, InventoryItem, InventorySaveResult, InventoryState, InventoryWarehouse } from './types/inventory'
 import type { WorkspacePermissions } from './api/workspace'
 import './App.css'
@@ -86,6 +86,30 @@ function App() {
     } catch (error) { return errorMessage(error) }
   }
 
+  async function changeAccountType(accountId: string, accountRole: EmployeeAccountType) {
+    try {
+      const profile = await changeEmployeeAccountType(accountId, accountRole)
+      if (accountId === employee?.id) {
+        inventoryRevision.current++
+        setEmployee(null)
+        setPermissions(undefined)
+        setAccounts([])
+        setInventory({ version: 2, catalog: { warehouses: [], brands: [], items: [] }, activity: [] })
+        setScreen('login')
+        setLoginError('Your account type changed. Please sign in again.')
+        return null
+      }
+      setAccounts(current => current.map(account => account.profile.id === accountId ? { ...account, profile } : account))
+      try {
+        const editHistory = await loadEmployeeHistory(accountId)
+        setAccounts(current => current.map(account => account.profile.id === accountId ? { ...account, editHistory } : account))
+      } catch (error) {
+        setWorkspaceError(`Account type saved, but account activity could not refresh. ${errorMessage(error)}`)
+      }
+      return null
+    } catch (error) { return errorMessage(error) }
+  }
+
   const openEmployee = useCallback(async (accountId: string) => {
     const editHistory = await loadEmployeeHistory(accountId)
     setAccounts((current) => current.map((account) => account.profile.id === accountId ? { ...account, editHistory } : account))
@@ -153,7 +177,7 @@ function App() {
     return (
       <>
         {workspaceError && <div className="stock-feedback" role="alert">{workspaceError} <button type="button" onClick={() => { void reloadWorkspace().catch((error) => setWorkspaceError(errorMessage(error))) }}>Reload workspace</button></div>}
-        <Workspace employee={employee} permissions={permissions} accounts={accounts} onSaveEmployee={saveEmployee} onCreateEmployee={createEmployee} onOpenEmployee={openEmployee} inventory={inventory} onInventoryAction={saveInventory} onRefreshInventory={refreshInventory} active={screen === 'workspace'} onSignOut={() => { void signOut() }} signingOut={signingOut} />
+        <Workspace employee={employee} permissions={permissions} accounts={accounts} onSaveEmployee={saveEmployee} onCreateEmployee={createEmployee} onChangeAccountType={changeAccountType} onOpenEmployee={openEmployee} inventory={inventory} onInventoryAction={saveInventory} onRefreshInventory={refreshInventory} active={screen === 'workspace'} onSignOut={() => { void signOut() }} signingOut={signingOut} />
         {screen === 'intro' && <LoginTransition onComplete={finishIntro} />}
       </>
     )

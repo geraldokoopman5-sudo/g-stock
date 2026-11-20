@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import type { EmployeeAccount, EmployeeCreate, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
-import { canEditEmployeeAccounts, employeeFieldLabels, employeeFields, restrictEmployeeEditingToManagers } from '../data/employeeAccounts'
+import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
+import { accountTypeLabels, canChangeAccountType, canEditEmployeeAccounts, employeeFieldLabels, employeeFields, restrictEmployeeEditingToManagers } from '../data/employeeAccounts'
 import EmployeeCard from './EmployeeCard'
 import CreateEmployeeDialog from './CreateEmployeeDialog'
+import ChangeAccountTypeForm from './ChangeAccountTypeForm'
 import { errorMessage } from '../api/client'
 import WorkspaceIcon from './WorkspaceIcon'
 import ListPagination from './ListPagination'
@@ -16,6 +17,7 @@ interface EmployeeAccountsProps {
   selectedId?: string
   onSave: (accountId: string, details: EmployeeUpdate) => Promise<string | null>
   onCreate?: (details: EmployeeCreate) => Promise<string | null>
+  onChangeAccountType?: (accountId: string, accountRole: EmployeeAccountType) => Promise<string | null>
 }
 
 const dateFormat = new Intl.DateTimeFormat('en-ZA', {
@@ -84,33 +86,46 @@ function EditEmployeeForm({ account, onSave, onCancel }: {
   )
 }
 
-function EmployeeAccountDetail({ account, viewer, onSave }: {
+function EmployeeAccountDetail({ account, viewer, onSave, onChangeAccountType }: {
   account: EmployeeAccount
   viewer: EmployeeProfile
   onSave: EmployeeAccountsProps['onSave']
+  onChangeAccountType: EmployeeAccountsProps['onChangeAccountType']
 }) {
   const [editing, setEditing] = useState(false)
+  const [changingType, setChangingType] = useState(false)
   const [saved, setSaved] = useState(false)
   const heading = useRef<HTMLHeadingElement>(null)
   const canEdit = canEditEmployeeAccounts(viewer) && (!account.profile.accountRole || account.profile.accountRole === 'Nemployee')
+  const canChangeType = canChangeAccountType(viewer) && Boolean(account.profile.accountRole && onChangeAccountType)
   const latestEdit = account.editHistory.at(-1)
 
   useEffect(() => {
-    if (!editing) heading.current?.focus()
-  }, [editing])
+    if (!editing && !changingType) heading.current?.focus()
+  }, [editing, changingType])
 
   return (
     <section className="employee-accounts" aria-labelledby="employee-account-heading">
       <a className="employee-accounts__back" href="#employees">← Employee accounts</a>
       <div className="employee-accounts__title">
         <div><p className="eyebrow">EMPLOYEE ACCOUNT</p><h1 ref={heading} id="employee-account-heading" tabIndex={-1}>{account.profile.fullName}</h1></div>
-        {canEdit && !editing && <button className="account-button" type="button" onClick={() => { setEditing(true); setSaved(false) }}>Edit</button>}
+        <div className="employee-accounts__actions">
+          {canEdit && !editing && !changingType && <button className="account-button" type="button" onClick={() => { setEditing(true); setSaved(false) }}>Edit</button>}
+          {canChangeType && !editing && !changingType && <button className="account-button" type="button" onClick={() => { setChangingType(true); setSaved(false) }}>Change account type</button>}
+        </div>
       </div>
       {saved && <p className="employee-accounts__saved" role="status">Changes saved. Edited by {latestEdit?.editedBy.fullName}.</p>}
       <div className="employee-accounts__detail">
         <div className="employee-accounts__card"><EmployeeCard employee={account.profile} /></div>
         <div className="employee-accounts__information">
-          {editing && canEdit ? (
+          {account.profile.accountRole && <p className="employee-accounts__type">Account type: <strong>{accountTypeLabels[account.profile.accountRole]}</strong></p>}
+          {changingType && canChangeType && onChangeAccountType ? (
+            <ChangeAccountTypeForm profile={account.profile} viewer={viewer} onCancel={() => setChangingType(false)} onSave={async accountRole => {
+              const error = await onChangeAccountType(account.profile.id, accountRole)
+              if (!error) { setChangingType(false); setSaved(true) }
+              return error
+            }} />
+          ) : editing && canEdit ? (
             <EditEmployeeForm account={account} onCancel={() => setEditing(false)} onSave={async (details) => {
               const error = await onSave(account.profile.id, details)
               if (!error) { setEditing(false); setSaved(true) }
@@ -123,7 +138,7 @@ function EmployeeAccountDetail({ account, viewer, onSave }: {
               {latestEdit ? (
                 <p className="employee-accounts__last-edit">By <strong>{latestEdit.editedBy.fullName}</strong> · {latestEdit.editedBy.employeeId}<br /><time dateTime={latestEdit.editedAt}>{dateFormat.format(new Date(latestEdit.editedAt))} SAST</time></p>
               ) : <p>Changes to this account will appear here, along with the employee who made them.</p>}
-              {!canEdit && <p className="employee-accounts__permission">Staff managers can edit normal employee accounts.</p>}
+              {!canEdit && <p className="employee-accounts__permission">Staff managers can change account types and edit normal employee details.</p>}
               {account.editHistory.length > 0 && (
                 <details className="employee-accounts__history">
                   <summary>Edit history ({account.editHistory.length})</summary>
@@ -148,7 +163,7 @@ function EmployeeAccountDetail({ account, viewer, onSave }: {
   )
 }
 
-export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave, onCreate, onOpen }: EmployeeAccountsProps) {
+export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave, onCreate, onOpen, onChangeAccountType }: EmployeeAccountsProps) {
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
   const [createdName, setCreatedName] = useState('')
@@ -178,7 +193,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
     if (account) return <>
       {loadingHistory && <p role="status">Loading account activity...</p>}
       {historyError && <p role="alert">{historyError} <button type="button" onClick={() => { if (onOpen) void onOpen(account.profile.id).then(() => setHistoryResult({ id: selectedId, error: '' })).catch((error) => setHistoryResult({ id: selectedId, error: errorMessage(error) })) }}>Retry</button></p>}
-      <EmployeeAccountDetail key={account.profile.id} account={account} viewer={viewer} onSave={onSave} />
+      <EmployeeAccountDetail key={account.profile.id} account={account} viewer={viewer} onSave={onSave} onChangeAccountType={onChangeAccountType} />
     </>
     return <section className="employee-accounts"><h1 ref={heading} tabIndex={-1}>Account not found</h1><a className="employee-accounts__back" href="#employees">Back to employee accounts</a></section>
   }

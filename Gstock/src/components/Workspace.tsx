@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { EmployeeAccount, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from '../types/employees'
+import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import EmployeeCard from './EmployeeCard'
 import EmployeeAccounts from './EmployeeAccounts'
 import Inventory from './Inventory'
@@ -35,6 +35,7 @@ interface WorkspaceProps {
   accounts: EmployeeAccount[]
   onSaveEmployee: (accountId: string, details: EmployeeUpdate) => Promise<string | null>
   onCreateEmployee?: (details: EmployeeCreate) => Promise<string | null>
+  onChangeAccountType?: (accountId: string, accountRole: EmployeeAccountType) => Promise<string | null>
   inventory: InventoryState
   onInventoryAction: SaveInventoryAction
   onRefreshInventory?: () => Promise<void>
@@ -44,7 +45,7 @@ interface WorkspaceProps {
   onSignOut: () => void
 }
 
-export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, onCreateEmployee, inventory, onInventoryAction, onRefreshInventory, onOpenEmployee, active, onSignOut, signingOut }: WorkspaceProps) {
+export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, onCreateEmployee, onChangeAccountType, inventory, onInventoryAction, onRefreshInventory, onOpenEmployee, active, onSignOut, signingOut }: WorkspaceProps) {
   const permissions = grantedPermissions ?? {
     canCreateWarehouse: employee.status !== 'InActive' && employee.accountRole !== 'StaffManager',
     canManageBrands: !employee.accountRole || employee.accountRole === 'StockManager',
@@ -113,7 +114,7 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
             </section>
           </div>
         ) : pageId === 'employees' ? (
-          <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} onCreate={onCreateEmployee} onOpen={onOpenEmployee} />
+          <EmployeeAccounts accounts={accounts} viewer={employee} selectedId={selectedId} onSave={onSaveEmployee} onCreate={onCreateEmployee} onOpen={onOpenEmployee} onChangeAccountType={onChangeAccountType} />
         ) : pageId === 'inventory' ? (
           <Inventory selectedBrandId={selectedId} selectedItemId={selectedItemId} catalog={inventory.catalog} activity={inventory.activity} onAction={onInventoryAction} permissions={permissions} />
         ) : (
