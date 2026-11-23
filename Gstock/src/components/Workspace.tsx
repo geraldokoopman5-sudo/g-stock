@@ -49,11 +49,11 @@ interface WorkspaceProps {
 }
 
 export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, onCreateEmployee, onChangeAccountType, inventory, onInventoryAction, onRefreshInventory, onOpenEmployee, active, reconnecting = false, onSignOut, signingOut }: WorkspaceProps) {
-  const permissions = grantedPermissions ?? {
-    canCreateWarehouse: employee.status !== 'InActive' && employee.accountRole !== 'StaffManager',
-    canManageBrands: !employee.accountRole || employee.accountRole === 'StockManager',
-    canManageItems: !employee.accountRole || employee.accountRole === 'Nemployee',
-    canManageEmployees: employee.accountRole === 'StaffManager',
+  const permissions = {
+    canCreateWarehouse: grantedPermissions?.canCreateWarehouse ?? (employee.status !== 'InActive' && employee.accountRole !== 'StaffManager'),
+    canManageBrands: grantedPermissions?.canManageBrands ?? (!employee.accountRole || employee.accountRole === 'StockManager'),
+    canManageItems: grantedPermissions?.canManageItems ?? (!employee.accountRole || employee.accountRole === 'Nemployee'),
+    canManageEmployees: grantedPermissions?.canManageEmployees ?? (employee.accountRole === 'StaffManager'),
   }
   const canViewEmployees = canViewEmployeeAccounts(employee)
   const visiblePages = pages.filter(destination => destination.id !== 'employees' || canViewEmployees)

@@ -65,6 +65,10 @@
 .inventory__table tbody th { font-weight: 500; width: 29%; }
 .inventory__table td { color: var(--color-text-secondary); }
 .inventory__item-name { display: block; color: var(--color-text); font-size: 13px; line-height: 1.6; }
+.inventory__item-delete { margin-top: 10px; }
+.inventory__delete-ready { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0; padding: 18px 20px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface-muted); }
+.inventory__delete-ready p { color: var(--color-text-secondary); font-size: 14px; line-height: 1.6; }
+.inventory__delete-ready strong { color: var(--color-text); }
 .inventory__sku { display: block; margin-top: 6px; color: var(--color-text-secondary); font: 10px/1.5 ui-monospace, Consolas, monospace; letter-spacing: .06em; }
 .inventory__location { font: 11px/1.5 ui-monospace, Consolas, monospace; white-space: nowrap; }
 .inventory__table .inventory__quantity { color: var(--color-text); font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }

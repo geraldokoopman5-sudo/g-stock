@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 
-let server, browser, createRoot, root, host, Inventory, Warehouses, InventoryDeleteButton, workspace
+let server, browser, createRoot, root, host, Inventory, Warehouses, Workspace, InventoryDeleteButton, workspace
 const originalFetch = globalThis.fetch
 const permissions = role => ({ canCreateWarehouse: true, canManageBrands: role === 'StockManager', canManageItems: role === 'Nemployee', canManageEmployees: role === 'StaffManager' })
 const catalog = (quantity = 0) => ({
@@ -26,6 +26,7 @@ before(async () => {
   server = await createServer({ server: { middlewareMode: true, ws: false, hmr: false }, appType: 'custom' })
   Inventory = (await server.ssrLoadModule('/src/components/Inventory.tsx')).default
   Warehouses = (await server.ssrLoadModule('/src/components/Warehouses.tsx')).default
+  Workspace = (await server.ssrLoadModule('/src/components/Workspace.tsx')).default
   InventoryDeleteButton = (await server.ssrLoadModule('/src/components/InventoryDeleteButton.tsx')).default
   workspace = await server.ssrLoadModule('/src/api/workspace.ts')
 })
@@ -76,6 +77,82 @@ test('only stock managers see brand and warehouse deletion, checking all items i
   const source = catalog()
   source.items = []
   assert.ok(renderToStaticMarkup(React.createElement(Inventory, { catalog: source, selectedBrandId: 'brand', onAction, permissions: permissions('StockManager') })).includes('Delete brand'))
+})
+
+test('zero-stock deletion is beside the item name, outside the horizontally distant Actions column', () => {
+  const element = document.createElement('div')
+  element.innerHTML = renderToStaticMarkup(React.createElement(Inventory, {
+    catalog: catalog(), selectedBrandId: 'brand', onAction, permissions: permissions('Nemployee'),
+  }))
+  const itemCell = element.querySelector('tbody th[scope="row"]')
+  assert.ok(itemCell.textContent.includes('Test Item'))
+  assert.equal(itemCell.querySelector('button[aria-label="Delete item Test Item"]').disabled, false)
+})
+
+test('normal employees retain item deletion when the API omits that permission flag; explicit denials are preserved', async () => {
+  window.history.replaceState(null, '', '#inventory/brand')
+  host = document.createElement('div')
+  document.body.append(host)
+  root = createRoot(host)
+  for (const [accountRole, flag, allowed] of [['Nemployee', undefined, true], ['Nemployee', false, false], ['StockManager', undefined, false], ['StaffManager', undefined, false]]) {
+    const supplied = { canCreateWarehouse: true, canManageBrands: false, canManageEmployees: false }
+    if (flag !== undefined) supplied.canManageItems = flag
+    await act(async () => { root.render(React.createElement(Workspace, {
+      employee: { id: 'viewer', employeeId: 'QA-1', fullName: 'Test Viewer', email: 'test@example.test', role: accountRole, accountRole, status: 'Active' },
+      permissions: supplied, accounts: [], inventory: { version: 2, catalog: catalog(), activity: [] }, active: true,
+      onInventoryAction: onAction, onSaveEmployee: async () => null, onSignOut() {},
+    })) })
+    assert.equal(Boolean(host.querySelector('button[aria-label="Delete item Test Item"]')), allowed)
+  }
+})
+
+test('saving zero stock exposes deletion immediately even when a stock filter hides the item row', async () => {
+  const writes = []
+  function Harness() {
+    const [source, setSource] = React.useState(catalog(2))
+    return React.createElement(Inventory, {
+      catalog: source, selectedBrandId: 'brand', permissions: permissions('Nemployee'),
+      onAction: async action => {
+        writes.push(action)
+        if (action.type === 'adjust-quantity') setSource(current => ({ ...current, items: current.items.map(item => ({ ...item, quantity: 0 })) }))
+        else if (action.type === 'delete-item') setSource(current => ({ ...current, items: [] }))
+        return { ok: true, entityId: 'item' }
+      },
+    })
+  }
+  host = document.createElement('div')
+  document.body.append(host)
+  root = createRoot(host)
+  await act(async () => { root.render(React.createElement(Harness)) })
+  await act(async () => {
+    const select = host.querySelector('#inventory-status')
+    select.value = 'in-stock'
+    select.dispatchEvent(new browser.Event('change', { bubbles: true }))
+  })
+  await click(host.querySelector('button[aria-label="Update quantity for Test Item"]'))
+  await act(async () => {
+    const select = host.querySelector('dialog select')
+    select.value = 'set'
+    select.dispatchEvent(new browser.Event('change', { bubbles: true }))
+  })
+  await act(async () => {
+    for (const [selector, value, prototype] of [['dialog input[type="number"]', '0', browser.HTMLInputElement.prototype], ['dialog textarea', 'Empty stock', browser.HTMLTextAreaElement.prototype]]) {
+      const input = host.querySelector(selector)
+      Object.getOwnPropertyDescriptor(prototype, 'value').set.call(input, value)
+      input.dispatchEvent(new browser.Event('input', { bubbles: true }))
+      input.dispatchEvent(new browser.Event('change', { bubbles: true }))
+    }
+  })
+  await submit()
+  assert.equal(writes[0]?.type, 'adjust-quantity')
+  assert.equal(writes[0]?.quantity, 0)
+  assert.equal(host.querySelector('tbody tr'), null, 'The in-stock filter hides the zero-stock row')
+  const ready = host.querySelector('[aria-label="Zero-stock item ready to delete"]')
+  assert.ok(ready?.textContent.includes('Test Item now has zero stock'))
+  await click(ready.querySelector('button'))
+  await submit()
+  assert.deepEqual(writes[1], { type: 'delete-item', itemId: 'item' })
+  assert.ok(host.textContent.includes('Stock item deleted.'))
 })
 
 test('DELETE requests encode record IDs and handle 204 without expecting an entity body', async () => {
