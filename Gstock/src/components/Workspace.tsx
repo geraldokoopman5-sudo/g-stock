@@ -44,10 +44,11 @@ interface WorkspaceProps {
   onOpenEmployee?: (id: string) => Promise<void>
   signingOut?: boolean
   active: boolean
+  reconnecting?: boolean
   onSignOut: () => void
 }
 
-export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, onCreateEmployee, onChangeAccountType, inventory, onInventoryAction, onRefreshInventory, onOpenEmployee, active, onSignOut, signingOut }: WorkspaceProps) {
+export default function Workspace({ employee, permissions: grantedPermissions, accounts, onSaveEmployee, onCreateEmployee, onChangeAccountType, inventory, onInventoryAction, onRefreshInventory, onOpenEmployee, active, reconnecting = false, onSignOut, signingOut }: WorkspaceProps) {
   const permissions = grantedPermissions ?? {
     canCreateWarehouse: employee.status !== 'InActive' && employee.accountRole !== 'StaffManager',
     canManageBrands: !employee.accountRole || employee.accountRole === 'StockManager',
@@ -96,7 +97,7 @@ export default function Workspace({ employee, permissions: grantedPermissions, a
   }, [navigationOpen])
 
   return (
-    <div className="workspace" inert={!active}>
+    <div className="workspace" inert={!active || reconnecting} aria-busy={reconnecting}>
       <header className="workspace__header">
         <a className="brand" href="#home" aria-label="G-Stock home">
           <BrandLogo decorative />

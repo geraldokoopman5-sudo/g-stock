@@ -8,14 +8,16 @@ import { changeEmployeeAccountType, createEmployee as createApiEmployee, loadEmp
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from './types/employees'
 import type { InventoryAction, InventoryBrand, InventoryItem, InventorySaveResult, InventoryState, InventoryWarehouse } from './types/inventory'
 import type { WorkspacePermissions } from './api/workspace'
+import { clearWorkspacePreview, loadWorkspacePreview, saveWorkspacePreview } from './lib/workspacePreview'
 import './App.css'
 
 function App() {
+  const [preview] = useState(loadWorkspacePreview)
   const [showPassword, setShowPassword] = useState(false)
-  const [accounts, setAccounts] = useState<EmployeeAccount[]>([])
-  const [inventory, setInventory] = useState<InventoryState>({ version: 2, catalog: { warehouses: [], brands: [], items: [] }, activity: [] })
-  const [employee, setEmployee] = useState<EmployeeProfile | null>(null)
-  const [permissions, setPermissions] = useState<WorkspacePermissions>()
+  const [accounts, setAccounts] = useState<EmployeeAccount[]>(preview?.accounts ?? [])
+  const [inventory, setInventory] = useState<InventoryState>(preview?.inventory ?? { version: 2, catalog: { warehouses: [], brands: [], items: [] }, activity: [] })
+  const [employee, setEmployee] = useState<EmployeeProfile | null>(preview?.profile ?? null)
+  const [permissions, setPermissions] = useState<WorkspacePermissions | undefined>(preview?.permissions)
   const [checkingSession, setCheckingSession] = useState(true)
   const [restoreError, setRestoreError] = useState('')
   const [restoreAttempt, setRestoreAttempt] = useState(0)
@@ -23,7 +25,7 @@ function App() {
   const [signingOut, setSigningOut] = useState(false)
   const [signingIn, setSigningIn] = useState(false)
   const [loginError, setLoginError] = useState('')
-  const [screen, setScreen] = useState<'login' | 'intro' | 'workspace' | 'logout'>('login')
+  const [screen, setScreen] = useState<'login' | 'intro' | 'workspace' | 'logout'>(preview ? 'workspace' : 'login')
   const emailRef = useRef<HTMLInputElement>(null)
   const inventoryRevision = useRef(0)
   const finishIntro = useCallback(() => setScreen('workspace'), [])
@@ -40,6 +42,7 @@ function App() {
   useEffect(() => {
     let cancelled = false
     api.onSessionExpired(() => {
+      clearWorkspacePreview()
       inventoryRevision.current++
       setEmployee(null)
       setPermissions(undefined)
@@ -51,7 +54,17 @@ function App() {
     })
     async function restore() {
       try {
-        if (!await api.restore() || cancelled) return
+        const restored = await api.restore()
+        if (cancelled) return
+        if (!restored) {
+          clearWorkspacePreview()
+          setEmployee(null)
+          setPermissions(undefined)
+          setAccounts([])
+          setInventory({ version: 2, catalog: { warehouses: [], brands: [], items: [] }, activity: [] })
+          setScreen('login')
+          return
+        }
         const { current, accounts: nextAccounts, inventory: nextInventory } = await loadWorkspaceData()
         if (cancelled) return
         setEmployee(current.profile)
@@ -71,6 +84,11 @@ function App() {
     void restore()
     return () => { cancelled = true }
   }, [restoreAttempt])
+
+  useEffect(() => {
+    if (employee && permissions && screen === 'workspace' && !checkingSession && !restoreError)
+      saveWorkspacePreview({ profile: employee, permissions, accounts, inventory })
+  }, [employee, permissions, accounts, inventory, screen, checkingSession, restoreError])
 
   async function saveEmployee(accountId: string, details: EmployeeUpdate) {
     try {
@@ -98,6 +116,7 @@ function App() {
     try {
       const profile = await changeEmployeeAccountType(accountId, accountRole)
       if (accountId === employee?.id) {
+        clearWorkspacePreview()
         inventoryRevision.current++
         setEmployee(null)
         setPermissions(undefined)
@@ -173,6 +192,7 @@ function App() {
     setSigningOut(true)
     try {
       await api.logout()
+      clearWorkspacePreview()
       inventoryRevision.current++
       setEmployee(null)
       setAccounts([])
@@ -190,18 +210,20 @@ function App() {
     if (screen === 'login' && !checkingSession && !restoreError) emailRef.current?.focus()
   }, [screen, checkingSession, restoreError])
 
-  if (checkingSession || restoreError) {
+  function retryRestore() {
+    setCheckingSession(true)
+    setRestoreError('')
+    setRestoreAttempt(attempt => attempt + 1)
+  }
+
+  if ((checkingSession || restoreError) && !employee) {
     return <main className="session-page" aria-busy={checkingSession}>
       <section className="session-card" aria-labelledby="session-heading">
         <BrandLogo />
         <h1 id="session-heading">{restoreError ? 'Could not restore your workspace' : 'Restoring your workspace'}</h1>
         {restoreError ? <>
           <p role="alert">{restoreError}</p>
-          <button className="sign-in" type="button" onClick={() => {
-            setCheckingSession(true)
-            setRestoreError('')
-            setRestoreAttempt(attempt => attempt + 1)
-          }}>Try again</button>
+          <button className="sign-in" type="button" onClick={retryRestore}>Try again</button>
         </> : <p role="status">Checking your saved session. Your page will open automatically.</p>}
       </section>
     </main>
@@ -210,8 +232,10 @@ function App() {
   if (employee && (screen === 'intro' || screen === 'workspace')) {
     return (
       <>
+        {restoreError && <div className="stock-feedback" role="alert">{restoreError} <button type="button" onClick={retryRestore}>Try again</button></div>}
+        {checkingSession && <p className="workspace-reconnecting" role="status">Reconnecting…</p>}
         {workspaceError && <div className="stock-feedback" role="alert">{workspaceError} <button type="button" onClick={() => { void reloadWorkspace().catch((error) => setWorkspaceError(errorMessage(error))) }}>Reload workspace</button></div>}
-        <Workspace employee={employee} permissions={permissions} accounts={accounts} onSaveEmployee={saveEmployee} onCreateEmployee={createEmployee} onChangeAccountType={changeAccountType} onOpenEmployee={openEmployee} inventory={inventory} onInventoryAction={saveInventory} onRefreshInventory={refreshInventory} active={screen === 'workspace'} onSignOut={() => { void signOut() }} signingOut={signingOut} />
+        <Workspace employee={employee} permissions={permissions} accounts={accounts} onSaveEmployee={saveEmployee} onCreateEmployee={createEmployee} onChangeAccountType={changeAccountType} onOpenEmployee={checkingSession || restoreError ? undefined : openEmployee} inventory={inventory} onInventoryAction={saveInventory} onRefreshInventory={checkingSession || restoreError ? undefined : refreshInventory} active={screen === 'workspace'} reconnecting={checkingSession || Boolean(restoreError)} onSignOut={() => { void signOut() }} signingOut={signingOut} />
         {screen === 'intro' && <LoginTransition onComplete={finishIntro} />}
       </>
     )

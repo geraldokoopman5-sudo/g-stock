@@ -40,7 +40,7 @@ async function unmount() {
   host?.remove()
   await browser.happyDOM.abort()
 }
-afterEach(async () => { await unmount(); globalThis.fetch = originalFetch })
+afterEach(async () => { await unmount(); globalThis.fetch = originalFetch; window.sessionStorage.clear() })
 after(async () => { globalThis.FormData = originalFormData; await server?.close(); await browser?.happyDOM.close() })
 
 function backend({ csrf, inventory, refresh } = {}) {
@@ -148,4 +148,76 @@ test('signing in after a genuinely expired session resumes the requested page', 
   assert.equal(window.location.hash, hash)
   await click([...host.querySelectorAll('button')].find(button => button.textContent === 'Finish transition'))
   assert.ok(host.querySelector('#selected-item-heading').textContent.includes('Test Item'))
+})
+
+test('reloading a loaded item page shows it immediately while reconnecting, with no replacement screen', async () => {
+  const hash = '#inventory/brand%2Fone/item%2Fone'
+  globalThis.fetch = backend()
+  await mount(hash)
+  assert.ok(host.querySelector('#selected-item-heading'))
+  await unmount()
+  let resolveRefresh
+  const reconnect = backend({ refresh: () => new Promise(resolve => { resolveRefresh = resolve }) })
+  globalThis.fetch = (url, options) => url.includes('/items?') ? Promise.resolve(json([{ ...catalog.items[0], quantity: 7 }])) : reconnect(url, options)
+  await mount(hash)
+  try {
+    assert.equal(host.querySelector('#email'), null)
+    assert.equal(host.querySelector('.session-page'), null)
+    assert.ok(host.querySelector('#selected-item-heading').textContent.includes('Test Item'))
+    assert.ok(host.querySelector('.inventory__selected-item').textContent.includes('0 units'))
+    assert.equal(window.location.hash, hash)
+    assert.ok(host.querySelector('.workspace').hasAttribute('inert'), 'Cached controls must wait for the real session check')
+    assert.equal(host.querySelector('.workspace').getAttribute('aria-busy'), 'true')
+    assert.ok(host.textContent.includes('Reconnecting'))
+  } finally {
+    await act(async () => { resolveRefresh(json({ accessToken: 'restored-1', expiresIn: 900 })) })
+  }
+  assert.equal(host.querySelector('.workspace').hasAttribute('inert'), false)
+  assert.ok(host.querySelector('#selected-item-heading').textContent.includes('Test Item'))
+  assert.ok(host.querySelector('.inventory__selected-item').textContent.includes('7 units'), 'Fresh server stock replaces the saved view')
+  assert.equal(host.querySelector('.workspace-reconnecting'), null)
+})
+
+test('a temporary reconnect error leaves the warehouse page visible and can retry in place', async () => {
+  const hash = '#warehouses/warehouse%2Fone'
+  globalThis.fetch = backend()
+  await mount(hash)
+  await unmount()
+  let offline = true
+  globalThis.fetch = backend({ csrf: () => {
+    if (offline) throw new TypeError('offline')
+    return json({ csrfToken: 'cookie-csrf' })
+  } })
+  await mount(hash)
+  assert.equal(host.querySelector('.session-page'), null)
+  assert.equal(host.querySelector('#email'), null)
+  assert.ok(host.querySelector('#warehouses-heading').textContent.includes('Test Warehouse'))
+  assert.ok(host.querySelector('[role="alert"]').textContent.includes('Could not connect'))
+  assert.ok(host.querySelector('.workspace').hasAttribute('inert'))
+  offline = false
+  await click([...host.querySelectorAll('button')].find(button => button.textContent === 'Try again'))
+  assert.ok(host.querySelector('#warehouses-heading').textContent.includes('Test Warehouse'))
+  assert.equal(host.querySelector('.workspace').hasAttribute('inert'), false)
+  assert.equal(window.location.hash, hash)
+})
+
+test('a cached page is removed if the server confirms that the session has expired', async () => {
+  globalThis.fetch = backend()
+  await mount()
+  await unmount()
+  assert.ok(window.sessionStorage.getItem('g-stock.workspace-preview.v1'))
+  globalThis.fetch = backend({ csrf: () => new Response(null, { status: 401 }) })
+  await mount()
+  assert.ok(host.querySelector('#email'))
+  assert.equal(host.querySelector('.workspace'), null)
+  assert.equal(window.sessionStorage.getItem('g-stock.workspace-preview.v1'), null)
+})
+
+test('logout removes the saved page before another reload', async () => {
+  globalThis.fetch = backend()
+  await mount()
+  await click(host.querySelector('button[aria-label^="Explore"]'))
+  await click(host.querySelector('.workspace-navigation__signout'))
+  assert.equal(window.sessionStorage.getItem('g-stock.workspace-preview.v1'), null)
+  assert.equal(window.location.hash, '')
 })
