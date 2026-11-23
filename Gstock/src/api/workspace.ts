@@ -17,7 +17,7 @@ type ApiEdit = Omit<EmployeeEdit, 'changes'> & { kind: string; changes: { field:
 async function allPages<T>(path: string): Promise<T[]> {
   const entries: T[] = []
   for (let offset = 0; ; offset += 200) {
-    const page = await api.request<T[]>(`${path}${path.includes('?') ? '&' : '?'}limit=200&offset=${offset}`)
+    const page = await api.request<T[]>(`${path}${path.includes('?') ? '&' : '?'}limit=200&offset=${offset}`, { cache: 'no-store' })
     entries.push(...page)
     if (page.length < 200) return entries
   }
@@ -42,7 +42,7 @@ export async function loadAccounts(): Promise<EmployeeAccount[]> {
 
 export async function loadInventoryCatalog(): Promise<InventoryCatalog> {
   const [warehouses, brands, items] = await Promise.all([
-    api.request<InventoryWarehouse[]>('/warehouses'),
+    api.request<InventoryWarehouse[]>('/warehouses', { cache: 'no-store' }),
     allPages<Omit<InventoryBrand, 'initials'>>('/brands'),
     allPages<InventoryItem>('/items'),
   ])

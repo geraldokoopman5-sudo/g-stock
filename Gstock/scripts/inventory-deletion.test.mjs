@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 
-let server, browser, createRoot, root, host, Inventory, Warehouses, Workspace, InventoryDeleteButton, workspace
+let server, browser, createRoot, root, host, Inventory, Warehouses, Workspace, InventoryActivity, InventoryDeleteButton, workspace
 const originalFetch = globalThis.fetch
 const permissions = role => ({ canCreateWarehouse: true, canManageBrands: role === 'StockManager', canManageItems: role === 'Nemployee', canManageEmployees: role === 'StaffManager' })
 const catalog = (quantity = 0) => ({
@@ -27,6 +27,7 @@ before(async () => {
   Inventory = (await server.ssrLoadModule('/src/components/Inventory.tsx')).default
   Warehouses = (await server.ssrLoadModule('/src/components/Warehouses.tsx')).default
   Workspace = (await server.ssrLoadModule('/src/components/Workspace.tsx')).default
+  InventoryActivity = (await server.ssrLoadModule('/src/components/InventoryActivity.tsx')).default
   InventoryDeleteButton = (await server.ssrLoadModule('/src/components/InventoryDeleteButton.tsx')).default
   workspace = await server.ssrLoadModule('/src/api/workspace.ts')
 })
@@ -87,6 +88,38 @@ test('zero-stock deletion is beside the item name, outside the horizontally dist
   const itemCell = element.querySelector('tbody th[scope="row"]')
   assert.ok(itemCell.textContent.includes('Test Item'))
   assert.equal(itemCell.querySelector('button[aria-label="Delete item Test Item"]').disabled, false)
+})
+
+test('deleted items and all their earlier events disappear from inventory and warehouse activity displays', () => {
+  const base = { warehouseId: 'warehouse', brandId: 'brand', actor: { id: 'actor', employeeId: 'QA-1', fullName: 'Test Employee' }, occurredAt: '2026-11-23T08:00:00Z' }
+  const events = [
+    { ...base, id: 'warehouse-event', type: 'warehouse-created', entityId: 'warehouse', entityName: 'Test Warehouse', brandId: undefined },
+    { ...base, id: 'live-event', type: 'item-created', entityId: 'item', entityName: 'Current item', quantity: 0, unit: 'units' },
+    { ...base, id: 'old-created', type: 'item-created', entityId: 'deleted-item', entityName: 'Deleted Widget', quantity: 4, unit: 'units' },
+    { ...base, id: 'old-adjusted', type: 'quantity-updated', entityId: 'deleted-item', entityName: 'Deleted Widget', previousQuantity: 4, quantity: 0, unit: 'units' },
+    { ...base, id: 'old-deleted', type: 'item-deleted', entityId: 'deleted-item', entityName: 'Deleted Widget', quantity: 0, unit: 'units' },
+  ]
+  const original = JSON.stringify(events)
+  for (const [Component, props] of [
+    [Inventory, { catalog: catalog(), activity: events }],
+    [Inventory, { catalog: catalog(), activity: events, selectedBrandId: 'brand' }],
+    [Warehouses, { catalog: catalog(), activity: events, selectedId: 'warehouse', onAction }],
+  ]) {
+    const markup = renderToStaticMarkup(React.createElement(Component, props))
+    assert.ok(!markup.includes('Deleted Widget'))
+    assert.ok(markup.includes('Current item'))
+    assert.ok(markup.includes('Warehouse activity ('))
+  }
+  const history = renderToStaticMarkup(React.createElement(InventoryActivity, { events }))
+  assert.ok(history.includes('Warehouse activity (2)'))
+  assert.ok(!history.includes('Deleted Widget'))
+  assert.equal(JSON.stringify(events), original, 'Only the visible view is filtered; source audit records are preserved')
+})
+
+test('a removed item is hidden from activity immediately, even before its deletion event refreshes', () => {
+  const event = { id: 'old-event', type: 'item-created', entityId: 'deleted-item', entityName: 'Deleted Widget', warehouseId: 'warehouse', brandId: 'brand', actor: { id: 'actor', employeeId: 'QA-1', fullName: 'Test Employee' }, occurredAt: '2026-11-23T08:00:00Z', quantity: 0, unit: 'units' }
+  const markup = renderToStaticMarkup(React.createElement(InventoryActivity, { events: [event], activeItemIds: new Set() }))
+  assert.equal(markup, '', 'Hide an empty activity section and its deleted item name')
 })
 
 test('normal employees retain item deletion when the API omits that permission flag; explicit denials are preserved', async () => {

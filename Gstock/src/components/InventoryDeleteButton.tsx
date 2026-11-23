@@ -59,7 +59,7 @@ export default function InventoryDeleteButton({ action, name, disabledReason, on
             setError('The record could not be deleted. Please try again.')
           } finally { savingRef.current = false; setSaving(false) }
         }}>
-          <p id={`${id}-description`}>Delete <strong>{name}</strong>{kind === 'brand' ? ' and all its zero-stock items' : kind === 'warehouse' ? ', all its brands, and all its zero-stock items' : ''}? It will disappear from active lists. Activity history will be kept.</p>
+          <p id={`${id}-description`}>Delete <strong>{name}</strong>{kind === 'brand' ? ' and all its zero-stock items' : kind === 'warehouse' ? ', all its brands, and all its zero-stock items' : ''}? {kind === 'item' ? 'It will no longer appear in inventory or activity history.' : 'It will disappear from active lists. Activity history will be kept.'}</p>
           {disabledReason && <p className="stock-form__error" role="alert">{disabledReason}</p>}
           {error && <p className="stock-form__error" role="alert">{error}</p>}
           <div className="stock-form__actions">

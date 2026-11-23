@@ -63,7 +63,7 @@ export default function Warehouses({ catalog, activity, selectedId, onAction, pe
         {!warehouses.length && <div className="warehouses__empty"><h2>{catalog.warehouses.length ? 'No warehouses match your search.' : 'Add your first warehouse.'}</h2><p>{catalog.warehouses.length ? 'Try another warehouse name or contact.' : 'Add a warehouse location, then organise its brands and stock.'}</p></div>}
         <ListPagination {...warehousePages} label="warehouses" href="#warehouses" />
       </>}
-      <InventoryActivity events={warehouse ? activity.filter((event) => event.warehouseId === warehouse.id) : activity.filter((event) => event.type === 'warehouse-created' || event.type === 'warehouse-deleted')} />
+      <InventoryActivity events={warehouse ? activity.filter((event) => event.warehouseId === warehouse.id) : activity.filter((event) => event.type === 'warehouse-created' || event.type === 'warehouse-deleted')} activeItemIds={new Set(catalog.items.map(item => item.id))} />
       {editor && <InventoryEditor key={`${editor.mode}/${editor.warehouseId ?? ''}`} selection={editor} catalog={catalog} onSave={onAction} onClose={() => { setEditor(null); heading.current?.focus() }} onAddBrand={permissions?.canManageBrands === false ? undefined : (warehouseId) => setEditor({ mode: 'brand', warehouseId })} onComplete={(id, action) => {
         setEditor(null); setFeedback('Warehouse details saved.'); heading.current?.focus()
         if (action.type === 'add-warehouse') { setQuery(''); window.location.hash = `warehouses/${encodeURIComponent(id)}` }

@@ -6,7 +6,7 @@ import BrandLogo from './components/BrandLogo'
 import { api, ApiError, errorMessage } from './api/client'
 import { changeEmployeeAccountType, createEmployee as createApiEmployee, loadEmployeeHistory, loadInventory, loadInventoryCatalog, loadWorkspaceData, saveEmployee as saveApiEmployee, saveInventory as saveApiInventory } from './api/workspace'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeProfile, EmployeeUpdate } from './types/employees'
-import type { InventoryAction, InventoryBrand, InventoryItem, InventorySaveResult, InventoryState, InventoryWarehouse } from './types/inventory'
+import type { InventoryAction, InventoryBrand, InventoryCatalog, InventoryItem, InventorySaveResult, InventoryState, InventoryWarehouse } from './types/inventory'
 import type { WorkspacePermissions } from './api/workspace'
 import { clearWorkspacePreview, loadWorkspacePreview, saveWorkspacePreview } from './lib/workspacePreview'
 import './App.css'
@@ -28,14 +28,28 @@ function App() {
   const [screen, setScreen] = useState<'login' | 'intro' | 'workspace' | 'logout'>(preview ? 'workspace' : 'login')
   const emailRef = useRef<HTMLInputElement>(null)
   const inventoryRevision = useRef(0)
+  const deletedInventory = useRef({ items: new Set<string>(), brands: new Set<string>(), warehouses: new Set<string>() })
+  const visibleCatalog = useCallback((catalog: InventoryCatalog): InventoryCatalog => {
+    const deleted = deletedInventory.current
+    if (!deleted.items.size && !deleted.brands.size && !deleted.warehouses.size) return catalog
+    const removedBrands = new Set(deleted.brands)
+    for (const brand of catalog.brands) if (deleted.warehouses.has(brand.warehouseId)) removedBrands.add(brand.id)
+    return {
+      warehouses: catalog.warehouses.filter(warehouse => !deleted.warehouses.has(warehouse.id)),
+      brands: catalog.brands.filter(brand => !removedBrands.has(brand.id)),
+      items: catalog.items.filter(item => !deleted.items.has(item.id) && !removedBrands.has(item.brandId)),
+    }
+  }, [])
   const finishIntro = useCallback(() => setScreen('workspace'), [])
   const finishLogout = useCallback(() => setScreen('login'), [])
   async function reloadWorkspace() {
+    const revision = ++inventoryRevision.current
     const { current, accounts: nextAccounts, inventory: nextInventory } = await loadWorkspaceData()
+    if (revision !== inventoryRevision.current) return
     setEmployee(current.profile)
     setPermissions(current.permissions)
     setAccounts(nextAccounts)
-    setInventory(nextInventory)
+    setInventory({ ...nextInventory, catalog: visibleCatalog(nextInventory.catalog) })
     setWorkspaceError('')
   }
 
@@ -70,7 +84,7 @@ function App() {
         setEmployee(current.profile)
         setPermissions(current.permissions)
         setAccounts(nextAccounts)
-        setInventory(nextInventory)
+        setInventory({ ...nextInventory, catalog: visibleCatalog(nextInventory.catalog) })
         setScreen('workspace')
       } catch (error) {
         if (!cancelled) {
@@ -83,7 +97,7 @@ function App() {
     }
     void restore()
     return () => { cancelled = true }
-  }, [restoreAttempt])
+  }, [restoreAttempt, visibleCatalog])
 
   useEffect(() => {
     if (employee && permissions && screen === 'workspace' && !checkingSession && !restoreError)
@@ -146,26 +160,31 @@ function App() {
     const revision = ++inventoryRevision.current
     const catalog = await loadInventoryCatalog()
     // Older refreshes must not replace a newer refresh, a stock write, or a signed-out state.
-    if (revision === inventoryRevision.current) setInventory((current) => ({ ...current, catalog }))
-  }, [])
+    if (revision === inventoryRevision.current) setInventory((current) => ({ ...current, catalog: visibleCatalog(catalog) }))
+  }, [visibleCatalog])
 
   async function saveInventory(action: InventoryAction): Promise<InventorySaveResult> {
     inventoryRevision.current++
     try {
       const entity = await saveApiInventory(action)
-      inventoryRevision.current++
+      const revision = ++inventoryRevision.current
+      const deleting = action.type === 'delete-item' || action.type === 'delete-brand' || action.type === 'delete-warehouse'
+      if (action.type === 'delete-item') deletedInventory.current.items.add(action.itemId)
+      if (action.type === 'delete-brand') deletedInventory.current.brands.add(action.brandId)
+      if (action.type === 'delete-warehouse') {
+        deletedInventory.current.warehouses.add(action.warehouseId)
+        for (const brand of inventory.catalog.brands)
+          if (brand.warehouseId === action.warehouseId) deletedInventory.current.brands.add(brand.id)
+      }
+      if (deleting) {
+        // Prune the reload preview synchronously once DELETE succeeds, before any history request.
+        const saved = loadWorkspacePreview()
+        if (saved) saveWorkspacePreview({ ...saved, inventory: { ...saved.inventory, catalog: visibleCatalog(saved.inventory.catalog) } })
+      }
       // Reflect a committed write immediately, even if refreshing activity later fails.
       setInventory((current) => {
         const catalog = current.catalog
-        if (action.type === 'delete-item') return { ...current, catalog: { ...catalog, items: catalog.items.filter((item) => item.id !== action.itemId) } }
-        if (action.type === 'delete-brand' || action.type === 'delete-warehouse') {
-          const removedBrands = new Set(catalog.brands.filter((brand) => action.type === 'delete-brand' ? brand.id === action.brandId : brand.warehouseId === action.warehouseId).map((brand) => brand.id))
-          return { ...current, catalog: {
-            warehouses: action.type === 'delete-warehouse' ? catalog.warehouses.filter((warehouse) => warehouse.id !== action.warehouseId) : catalog.warehouses,
-            brands: catalog.brands.filter((brand) => !removedBrands.has(brand.id)),
-            items: catalog.items.filter((item) => !removedBrands.has(item.brandId)),
-          } }
-        }
+        if (deleting) return { ...current, catalog: visibleCatalog(catalog) }
         if (action.type === 'add-warehouse') return { ...current, catalog: { ...catalog, warehouses: [...catalog.warehouses, entity as InventoryWarehouse] } }
         if (action.type === 'add-brand' || action.type === 'set-brand-photo') {
           const brand = entity as InventoryBrand
@@ -175,13 +194,28 @@ function App() {
         const item = entity as InventoryItem
         return { ...current, catalog: { ...catalog, items: action.type === 'add-item' ? [...catalog.items, item] : catalog.items.map((entry) => entry.id === item.id ? item : entry) } }
       })
-      try { setInventory(await loadInventory()); setWorkspaceError('') } catch (error) {
-        setWorkspaceError(`Changes saved, but stock activity could not refresh. ${errorMessage(error)}`)
+      async function refreshAfterSave() {
+        try {
+          const next = await loadInventory()
+          if (revision !== inventoryRevision.current) return
+          setInventory({ ...next, catalog: visibleCatalog(next.catalog) })
+          setWorkspaceError('')
+        } catch (error) {
+          if (revision === inventoryRevision.current)
+            setWorkspaceError(`Changes saved, but stock activity could not refresh. ${errorMessage(error)}`)
+        }
       }
+      // Close the delete confirmation and leave a deleted detail page immediately.
+      if (deleting) void refreshAfterSave()
+      else await refreshAfterSave()
       return { ok: true, entityId: entity.id }
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        try { setInventory(await loadInventory()) } catch { /* Keep the original conflict visible. */ }
+        const revision = inventoryRevision.current
+        try {
+          const next = await loadInventory()
+          if (revision === inventoryRevision.current) setInventory({ ...next, catalog: visibleCatalog(next.catalog) })
+        } catch { /* Keep the original conflict visible. */ }
       }
       return { ok: false, error: errorMessage(error) }
     }

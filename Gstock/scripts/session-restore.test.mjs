@@ -43,7 +43,7 @@ async function unmount() {
 afterEach(async () => { await unmount(); globalThis.fetch = originalFetch; window.sessionStorage.clear() })
 after(async () => { globalThis.FormData = originalFormData; await server?.close(); await browser?.happyDOM.close() })
 
-function backend({ csrf, inventory, refresh } = {}) {
+function backend({ csrf, inventory, refresh, items, activity, remove } = {}) {
   let rotations = 0
   return async (url, options = {}) => {
     assert.equal(options.credentials, 'same-origin')
@@ -56,11 +56,12 @@ function backend({ csrf, inventory, refresh } = {}) {
     if (url.endsWith('/auth/login')) return json({ accessToken: 'signed-in', expiresIn: 900 })
     if (url.endsWith('/auth/logout')) return new Response(null, { status: 204 })
     assert.match(options.headers.get('Authorization'), /^Bearer (restored-\d+|signed-in)$/)
+    if (options.method === 'DELETE' && url === '/api/v1/items/item%2Fone') return remove ? remove() : new Response(null, { status: 204 })
     if (url.endsWith('/auth/me')) return json({ profile, permissions: { canCreateWarehouse: true, canManageItems: true, canManageBrands: false, canManageEmployees: false } })
     if (url.endsWith('/warehouses')) return inventory ? inventory() : json(catalog.warehouses)
     if (url.includes('/brands?')) return json(catalog.brands)
-    if (url.includes('/items?')) return json(catalog.items)
-    if (url.includes('/inventory/activity?')) return json([])
+    if (url.includes('/items?')) return items ? items() : json(catalog.items)
+    if (url.includes('/inventory/activity?')) return activity ? activity() : json([])
     throw new Error(`Unexpected request: ${url}`)
   }
 }
@@ -220,4 +221,57 @@ test('logout removes the saved page before another reload', async () => {
   await click(host.querySelector('.workspace-navigation__signout'))
   assert.equal(window.sessionStorage.getItem('g-stock.workspace-preview.v1'), null)
   assert.equal(window.location.hash, '')
+})
+
+test('a confirmed deletion removes the row, detail, alerts and saved preview before activity finishes refreshing', async () => {
+  let deleted = false, resolveActivity
+  const oldEvent = { id: 'created', type: 'item-created', itemId: 'item/one', brandId: 'brand/one', warehouseId: 'warehouse/one', entityName: 'Test Item', actor: { id: profile.id, employeeId: profile.employeeId, fullName: profile.fullName }, occurredAt: '2026-11-23T08:00:00Z', quantity: 0, unit: 'units' }
+  globalThis.fetch = backend({
+    remove: () => { deleted = true; return new Response(null, { status: 204 }) },
+    items: () => json(deleted ? [] : catalog.items),
+    activity: () => deleted ? new Promise(resolve => { resolveActivity = resolve }) : json([oldEvent]),
+  })
+  await mount()
+  await click(host.querySelector('.inventory__selected-item button[aria-label="Delete item Test Item"]'))
+  await act(async () => { host.querySelector('dialog form').dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })) })
+  try {
+    assert.equal(deleted, true)
+    assert.equal(host.querySelector('tbody tr'), null)
+    assert.equal(host.querySelector('.inventory__selected-item'), null)
+    assert.equal(host.querySelector('button[aria-label="Delete item Test Item"]'), null)
+    assert.ok(host.textContent.includes('No stock alerts.'))
+    const preview = JSON.parse(window.sessionStorage.getItem('g-stock.workspace-preview.v1'))
+    assert.deepEqual(preview.view.inventory.catalog.items, [])
+    assert.equal(window.location.hash, '#inventory/brand%2Fone', 'Leave the deleted item URL immediately, without waiting for history')
+    assert.equal(host.querySelector('dialog'), null)
+    assert.ok(!host.textContent.includes('Test Item'), 'The deleted name is also removed from visible activity history')
+  } finally {
+    if (resolveActivity) await act(async () => { resolveActivity(json([oldEvent, { ...oldEvent, id: 'deleted', type: 'item-deleted' }])) })
+  }
+  assert.ok(!host.textContent.includes('Test Item'))
+  await unmount()
+  globalThis.fetch = backend({ items: () => json([]) })
+  await mount('#inventory/brand%2Fone')
+  assert.equal(host.querySelector('tbody tr'), null)
+  assert.ok(!host.textContent.includes('Test Item'))
+})
+
+test('a stale refresh cannot bring a confirmed deleted item or its low-stock alert back', async () => {
+  let deleted = false
+  globalThis.fetch = backend({
+    remove: () => { deleted = true; return new Response(null, { status: 204 }) },
+    // Simulate a stale catalogue read arriving after the successful DELETE.
+    items: () => json(catalog.items),
+  })
+  await mount()
+  await click(host.querySelector('.inventory__selected-item button[aria-label="Delete item Test Item"]'))
+  await act(async () => { host.querySelector('dialog form').dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })) })
+  assert.equal(deleted, true)
+  assert.equal(host.querySelector('tbody tr'), null)
+  assert.equal(host.querySelector('.inventory__selected-item'), null)
+  await click(host.querySelector('button[aria-label^="Explore"]'))
+  assert.equal(host.querySelector('.stock-alerts__item'), null)
+  assert.ok(host.textContent.includes('No stock alerts.'))
+  const preview = JSON.parse(window.sessionStorage.getItem('g-stock.workspace-preview.v1'))
+  assert.deepEqual(preview.view.inventory.catalog.items, [])
 })
