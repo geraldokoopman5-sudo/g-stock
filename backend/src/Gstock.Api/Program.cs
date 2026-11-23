@@ -19,10 +19,12 @@ using Gstock.Api.Modules.Warehouses.Api;
 using Gstock.Api.Modules.Warehouses.Application;
 using Gstock.Api.Modules.Warehouses.Infrastructure;
 using Gstock.Api.Shared.Database;
+using Gstock.Api.Shared.Configuration;
 using Gstock.Contracts;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddDevelopmentEnvironmentFile();
 builder.Services.AddPostgresDataSource();
 builder.Services.AddScoped<IAuthSessionRepository, PostgresAuthSessionRepository>();
 builder.Services.AddScoped<IWarehouseRepository, PostgresWarehouseRepository>();

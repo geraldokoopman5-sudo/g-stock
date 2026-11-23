@@ -14,7 +14,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>23381db9-edea-4f84-a294-637eb63b4596</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +21,9 @@
                       LogicalName="Gstock.Migrations.%(Filename)%(Extension)" />
     <Content Update="appsettings.Local.json"
              CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <Content Remove=".env*" />
+    <None Update=".env*"
+          CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
 </Project>

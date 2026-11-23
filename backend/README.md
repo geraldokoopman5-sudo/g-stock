@@ -4,15 +4,15 @@ Run these commands from the folder containing `Gstock.sln`. Local development us
 
 ## Configure and migrate PostgreSQL
 
-Create an empty database named `gstock_dev` if it does not exist. Put your local connection string in `backend/src/Gstock.Api/appsettings.Local.json`. This file is ignored by Git and is read in Development when no other `ConnectionStrings:DefaultConnection` is configured.
+Create an empty database named `gstock_dev` if it does not exist. Copy `backend/src/Gstock.Api/.env.example` to `.env.local` in the same directory and set your database connection string. The API reads this file only in Development. It is ignored by Git and excluded from build/publish output and Docker contexts. Keep backend secrets in this file; `Gstock/.env.local` belongs to the frontend proxy and must never contain backend credentials.
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=gstock_dev;Username=postgres;Password=YOUR_LOCAL_PASSWORD"
-  }
-}
+```dotenv
+ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=gstock_dev;Username=postgres;Password=YOUR_LOCAL_PASSWORD"
 ```
+
+Use one `NAME=value` entry per line; `__` maps to nested .NET configuration keys. Blank lines and `#` comments are supported. Single-quoted values are literal; double-quoted values use JSON escaping, including `\n` for multiline PEM keys. Values are never expanded as shell commands or references to other variables. Real environment variables and command-line arguments override `.env.local`; the file overrides appsettings. Restart the API after editing it. The old `appsettings.Local.json` database fallback and project user-secrets registration are no longer used.
+
+In production, configure `ConnectionStrings__DefaultConnection`, `Auth__Issuer`, `Auth__SigningKeyId`, `Auth__PrivateKeyPem`, and `Auth__SigningKeys__<key-id>` in the backend host's environment/secrets settings. Production never loads `.env.local`. Never put passwords or private keys in frontend `VITE_*` variables. Moving a value to a local file does not revoke credentials previously committed to Git: rotate exposed passwords or keys before cleaning history.
 
 ```powershell
 dotnet run --project .\backend\src\Gstock.Api --launch-profile http -- --check-db
@@ -37,7 +37,7 @@ Start the API with the `http` launch profile (`http://localhost:5268`), then run
 
 ## Create development accounts
 
-Run the corresponding line once for each manager account you still need. These commands also apply pending migrations and set up development token signing if needed. Choose a G-Stock email and password at each prompt.
+Run the corresponding line once for each manager account you still need. These commands also apply pending migrations and generate development JWT signing settings in the backend `.env.local` if absent. Existing keys are preserved. Choose a G-Stock email and password at each prompt; employee passwords are hashed in the database, not stored in `.env.local`.
 
 ```powershell
 pwsh -NoProfile -File .\backend\scripts\Initialize-DevelopmentAuth.ps1
@@ -68,3 +68,9 @@ node backend/scripts/test-account-types.mjs
 ```
 
 This requires Node.js 24, .NET 10, and PostgreSQL binaries (by default `C:/Program Files/PostgreSQL/18/bin`; override with `GSTOCK_POSTGRES_BIN`). It builds the API, creates a disposable local PostgreSQL cluster, applies every migration, and starts the API with generated test JWT keys and test sessions. It checks removal of existing department data, preservation of unrelated audit history, title normalization and enum enforcement, denied actors, validation, all account types, persistence, account creation/login, permission updates, session revocation, and self-demotion. It stops the processes and removes its temporary database afterward. It does not use configured development or hosted database credentials.
+
+The local environment loader has dependency-free checks for PEM/password escaping, safe errors, configuration precedence and production isolation:
+
+```powershell
+dotnet run --project backend/tests/Gstock.Configuration.Tests
+```

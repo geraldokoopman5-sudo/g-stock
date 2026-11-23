@@ -429,3 +429,8 @@ FodyWeavers.xsd
 
 # Local G-Stock database credentials
 /backend/src/Gstock.Api/appsettings.Local.json
+
+# Local environment secrets (commit placeholder examples only)
+.env
+.env.*
+!.env.example

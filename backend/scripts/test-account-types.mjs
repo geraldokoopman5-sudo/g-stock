@@ -1,5 +1,5 @@
 // Integration test using a disposable PostgreSQL cluster and a local API process.
-// Requires Node.js 24, .NET 10 and PostgreSQL binaries. Never uses appsettings.Local.json.
+// Requires Node.js 24, .NET 10 and PostgreSQL binaries. Production ignores .env.local.
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
 import { generateKeyPairSync, randomUUID, sign } from 'node:crypto'
