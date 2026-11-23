@@ -56,6 +56,8 @@ Brands and stock items accept an optional PNG or JPEG picture up to 1 MiB, with 
 
 Access tokens remain in memory. The API sets an HttpOnly refresh cookie; session restoration and access-token renewal obtain a CSRF token before rotating the cookie. Remember me is passed to the backend to control session persistence. Logout revokes the session and clears its cookie. Failed requests display API validation, permission, and stock-conflict messages.
 
+Reloading keeps the current page URL, including an open warehouse, brand, or stock item. The app shows a session-restoration screen until it has checked the saved cookie and loaded the workspace. Temporary API or network failures show **Try again** so employees can recover without entering their password again. The sign-in form appears only when the session is missing or expired; signing in from an existing workspace link resumes that page. Explicit logout clears the page URL as well as the session. Regression tests exercise real app remounts with a fresh API client, repeated reloads, slow restoration, retryable failures, and expired-session sign-in.
+
 ### Render backend and Vercel frontend
 
 Deploy the backend to Render using `backend/Dockerfile`. Set the database and JWT variables from the backend deployment guide, including `ASPNETCORE_ENVIRONMENT=Production` and `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. Apply all SQL migrations locally against the Supabase database before starting the current backend. The migrations and manager provisioning commands run in Development.

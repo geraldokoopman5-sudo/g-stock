@@ -17,6 +17,8 @@ function App() {
   const [employee, setEmployee] = useState<EmployeeProfile | null>(null)
   const [permissions, setPermissions] = useState<WorkspacePermissions>()
   const [checkingSession, setCheckingSession] = useState(true)
+  const [restoreError, setRestoreError] = useState('')
+  const [restoreAttempt, setRestoreAttempt] = useState(0)
   const [workspaceError, setWorkspaceError] = useState('')
   const [signingOut, setSigningOut] = useState(false)
   const [signingIn, setSigningIn] = useState(false)
@@ -40,9 +42,11 @@ function App() {
     api.onSessionExpired(() => {
       inventoryRevision.current++
       setEmployee(null)
+      setPermissions(undefined)
       setAccounts([])
       setInventory({ version: 2, catalog: { warehouses: [], brands: [], items: [] }, activity: [] })
       setScreen('login')
+      setRestoreError('')
       setLoginError('Your session has expired. Please sign in again.')
     })
     async function restore() {
@@ -56,14 +60,17 @@ function App() {
         setInventory(nextInventory)
         setScreen('workspace')
       } catch (error) {
-        if (!cancelled) setLoginError(errorMessage(error))
+        if (!cancelled) {
+          if (error instanceof ApiError && error.status === 401) setLoginError(errorMessage(error))
+          else setRestoreError(errorMessage(error))
+        }
       } finally {
         if (!cancelled) setCheckingSession(false)
       }
     }
     void restore()
     return () => { cancelled = true }
-  }, [])
+  }, [restoreAttempt])
 
   async function saveEmployee(accountId: string, details: EmployeeUpdate) {
     try {
@@ -180,8 +187,25 @@ function App() {
   }
 
   useEffect(() => {
-    if (screen === 'login' && !checkingSession) emailRef.current?.focus()
-  }, [screen, checkingSession])
+    if (screen === 'login' && !checkingSession && !restoreError) emailRef.current?.focus()
+  }, [screen, checkingSession, restoreError])
+
+  if (checkingSession || restoreError) {
+    return <main className="session-page" aria-busy={checkingSession}>
+      <section className="session-card" aria-labelledby="session-heading">
+        <BrandLogo />
+        <h1 id="session-heading">{restoreError ? 'Could not restore your workspace' : 'Restoring your workspace'}</h1>
+        {restoreError ? <>
+          <p role="alert">{restoreError}</p>
+          <button className="sign-in" type="button" onClick={() => {
+            setCheckingSession(true)
+            setRestoreError('')
+            setRestoreAttempt(attempt => attempt + 1)
+          }}>Try again</button>
+        </> : <p role="status">Checking your saved session. Your page will open automatically.</p>}
+      </section>
+    </main>
+  }
 
   if (employee && (screen === 'intro' || screen === 'workspace')) {
     return (
@@ -228,7 +252,7 @@ function App() {
               try {
                 await api.login(email, password, formData.get('remember') === 'on')
                 await reloadWorkspace()
-                window.history.replaceState(null, '', '#home')
+                if (!window.location.hash) window.history.replaceState(null, '', '#home')
                 setScreen('intro')
               } catch (error) {
                 setLoginError(errorMessage(error))
