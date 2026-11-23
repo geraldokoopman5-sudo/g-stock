@@ -1,4 +1,6 @@
 using Gstock.Api.Modules.Activity.Application;
+using Gstock.Api.Modules.Brands.Application;
+using Gstock.Api.Modules.Employees.Application;
 using Gstock.Api.Modules.Warehouses.Domain;
 using Gstock.Api.Shared.Api;
 using Gstock.Api.Shared.Database;
@@ -18,8 +20,22 @@ internal sealed class WarehouseService(
     IWarehouseRepository warehouses,
     IInventoryActivityRepository activities,
     IEmployeeDirectory employees,
+    BrandService brands,
     PostgresUnitOfWork database)
 {
+    public Task ArchiveAsync(Guid id, Guid actorId, CancellationToken token) =>
+        database.RunAsync(async (transaction, ct) =>
+        {
+            var actor = await employees.RequireRoleAsync(actorId, AccountRoles.StockManager, transaction, ct);
+            var name = await warehouses.LockActiveAsync(id, transaction, ct) ?? throw ApiError.Missing("Warehouse");
+            var brandIds = await warehouses.LockActiveBrandsAsync(id, transaction, ct);
+            foreach (var brandId in brandIds)
+                await brands.ArchiveInTransactionAsync(brandId, actor, transaction, ct);
+            await warehouses.ArchiveAsync(id, transaction, ct);
+            await activities.AddAsync(new InventoryEvent("warehouse-deleted", id, null, null, name, actor), transaction, ct);
+            return true;
+        }, token);
+
     public Task<Warehouse> CreateAsync(
         CreateWarehouseInput input,
         Guid actorId,

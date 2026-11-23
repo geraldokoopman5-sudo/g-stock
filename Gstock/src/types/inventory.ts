@@ -57,7 +57,7 @@ export interface InventoryActor {
 
 export interface InventoryActivity {
   id: string
-  type: 'warehouse-created' | 'brand-created' | 'item-created' | 'quantity-updated' | 'brand-deleted' | 'item-deleted'
+  type: 'warehouse-created' | 'warehouse-deleted' | 'brand-created' | 'item-created' | 'quantity-updated' | 'brand-deleted' | 'item-deleted'
   entityId: string
   entityName: string
   warehouseId: string
@@ -80,7 +80,12 @@ export type NewWarehouse = Omit<InventoryWarehouse, 'id'>
 export type NewBrand = Pick<InventoryBrand, 'warehouseId' | 'name' | 'description'> & { profilePhoto?: string }
 export type NewStockItem = Omit<InventoryItem, 'id' | 'hasProfilePhoto' | 'photoUpdatedAt'> & { profilePhoto?: string }
 export type QuantityMode = 'add' | 'remove' | 'set'
+export type InventoryDeleteAction =
+  | { type: 'delete-item'; itemId: string }
+  | { type: 'delete-brand'; brandId: string }
+  | { type: 'delete-warehouse'; warehouseId: string }
 export type InventoryAction =
+  | InventoryDeleteAction
   | { type: 'add-warehouse'; input: NewWarehouse }
   | { type: 'add-brand'; input: NewBrand }
   | { type: 'add-item'; input: NewStockItem }

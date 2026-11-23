@@ -3,6 +3,7 @@ import type { InventoryActivity as Activity, InventoryCatalog, SaveInventoryActi
 import { getBrandGroups } from '../data/inventory'
 import InventoryEditor from './InventoryEditor'
 import InventoryPhoto from './InventoryPhoto'
+import InventoryDeleteButton from './InventoryDeleteButton'
 import type { InventoryEditorSelection } from './InventoryEditor'
 import InventoryActivity from './InventoryActivity'
 import WorkspaceIcon from './WorkspaceIcon'
@@ -40,6 +41,9 @@ export default function Warehouses({ catalog, activity, selectedId, onAction, pe
       <div className="warehouses__heading"><div><h1 id="warehouses-heading" ref={heading} tabIndex={-1}>{warehouse?.name ?? 'Warehouses'}</h1><p className="workspace__description">{warehouse ? 'Brands and stock held at this warehouse.' : 'Manage your warehouse locations, brands, and stock.'}</p></div>
         <div className="stock-actions">{warehouse ? <><button className="stock-button" type="button" disabled={permissions?.canManageBrands === false} onClick={() => setEditor({ mode: 'brand', warehouseId: warehouse.id })}>Add brand</button><button className="stock-button stock-button--primary" type="button" disabled={permissions?.canManageItems === false || !groups.length} onClick={() => setEditor({ mode: 'item', warehouseId: warehouse.id })}>Add stock</button></> : <button className="stock-button stock-button--primary" type="button" disabled={permissions?.canCreateWarehouse === false} onClick={() => setEditor({ mode: 'warehouse' })}>Add warehouse</button>}</div>
       </div>
+      {warehouse && permissions?.canManageBrands === true && <div className="stock-actions"><InventoryDeleteButton action={{ type: 'delete-warehouse', warehouseId: warehouse.id }} name={warehouse.name}
+        disabledReason={catalog.items.some((item) => item.quantity !== 0 && catalog.brands.some((brand) => brand.id === item.brandId && brand.warehouseId === warehouse.id)) ? 'All warehouse items must be at zero stock.' : undefined}
+        onSave={onAction} onDeleted={() => { setFeedback('Warehouse, brands, and zero-stock items deleted.'); window.location.hash = 'warehouses' }} /></div>}
       <p className="warehouses__local">Saved to G-Stock · Available to all employee accounts</p>
       {feedback && <p className="stock-feedback" role="status">{feedback}</p>}
       {warehouse ? <>
@@ -59,7 +63,7 @@ export default function Warehouses({ catalog, activity, selectedId, onAction, pe
         {!warehouses.length && <div className="warehouses__empty"><h2>{catalog.warehouses.length ? 'No warehouses match your search.' : 'Add your first warehouse.'}</h2><p>{catalog.warehouses.length ? 'Try another warehouse name or contact.' : 'Add a warehouse location, then organise its brands and stock.'}</p></div>}
         <ListPagination {...warehousePages} label="warehouses" href="#warehouses" />
       </>}
-      <InventoryActivity events={warehouse ? activity.filter((event) => event.warehouseId === warehouse.id) : activity.filter((event) => event.type === 'warehouse-created')} />
+      <InventoryActivity events={warehouse ? activity.filter((event) => event.warehouseId === warehouse.id) : activity.filter((event) => event.type === 'warehouse-created' || event.type === 'warehouse-deleted')} />
       {editor && <InventoryEditor key={`${editor.mode}/${editor.warehouseId ?? ''}`} selection={editor} catalog={catalog} onSave={onAction} onClose={() => { setEditor(null); heading.current?.focus() }} onAddBrand={permissions?.canManageBrands === false ? undefined : (warehouseId) => setEditor({ mode: 'brand', warehouseId })} onComplete={(id, action) => {
         setEditor(null); setFeedback('Warehouse details saved.'); heading.current?.focus()
         if (action.type === 'add-warehouse') { setQuery(''); window.location.hash = `warehouses/${encodeURIComponent(id)}` }

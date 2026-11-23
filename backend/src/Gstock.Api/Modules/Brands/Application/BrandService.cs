@@ -1,7 +1,9 @@
+using System.Data.Common;
 using Gstock.Api.Modules.Activity.Application;
 using Gstock.Api.Modules.Brands.Domain;
 using Gstock.Api.Modules.Brands.Infrastructure;
 using Gstock.Api.Modules.Employees.Application;
+using Gstock.Api.Modules.Items.Infrastructure;
 using Gstock.Api.Shared.Api;
 using Gstock.Api.Shared.Database;
 using Gstock.Contracts;
@@ -11,7 +13,7 @@ namespace Gstock.Api.Modules.Brands.Application;
 internal sealed record CreateBrandInput(Guid WarehouseId, string? Name, string? Description, byte[]? ProfilePhoto);
 
 internal sealed class BrandService(
-    PostgresBrandRepository brands, IEmployeeDirectory employees,
+    PostgresBrandRepository brands, PostgresItemRepository items, IEmployeeDirectory employees,
     IInventoryActivityRepository activity, PostgresUnitOfWork database)
 {
     public Task<Brand> CreateAsync(CreateBrandInput input, Guid actorId, CancellationToken token)
@@ -34,15 +36,25 @@ internal sealed class BrandService(
         database.RunAsync(async (transaction, ct) =>
         {
             var actor = await employees.RequireRoleAsync(actorId, AccountRoles.StockManager, transaction, ct);
-            var brand = await brands.LockActiveAsync(id, transaction, ct) ?? throw ApiError.Missing("Brand");
-            if (!await brands.TryArchiveAsync(id, transaction, ct))
-            {
-                throw ApiError.Conflict("Archive this brand's remaining items first.");
-            }
-            await activity.AddAsync(new InventoryEvent("brand-deleted", brand.WarehouseId, id,
-                null, brand.Name, actor), transaction, ct);
+            await ArchiveInTransactionAsync(id, actor, transaction, ct);
             return true;
         }, token);
+
+    internal async Task ArchiveInTransactionAsync(
+        Guid id, EmployeeActor actor, DbTransaction transaction, CancellationToken token)
+    {
+        var brand = await brands.LockActiveAsync(id, transaction, token) ?? throw ApiError.Missing("Brand");
+        var archivedItems = await items.ArchiveEmptyBrandItemsAsync(id, transaction, token);
+        foreach (var item in archivedItems)
+        {
+            await activity.AddAsync(new InventoryEvent("item-deleted", item.WarehouseId, id,
+                item.Id, item.Name, actor, Quantity: 0, Unit: item.Unit), transaction, token);
+        }
+        if (!await brands.TryArchiveAsync(id, transaction, token))
+            throw ApiError.Conflict("All items must have zero stock before deletion.");
+        await activity.AddAsync(new InventoryEvent("brand-deleted", brand.WarehouseId, id,
+            null, brand.Name, actor), transaction, token);
+    }
 
     public Task<Brand> SetPhotoAsync(Guid id, SetInventoryPhotoInput input, Guid actorId, CancellationToken token)
     {

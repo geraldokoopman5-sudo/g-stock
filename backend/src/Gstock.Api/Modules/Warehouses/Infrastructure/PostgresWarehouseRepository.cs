@@ -1,6 +1,7 @@
 using System.Data.Common;
 using Gstock.Api.Modules.Warehouses.Application;
 using Gstock.Api.Modules.Warehouses.Domain;
+using Gstock.Api.Shared.Database;
 using Npgsql;
 
 namespace Gstock.Api.Modules.Warehouses.Infrastructure;
@@ -13,6 +14,7 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
         const string sql = """
             SELECT id, name, street_name, suburb_name, city, province, postal_code, contact_name, contact_email, notes
             FROM public.warehouses
+            WHERE archived_at IS NULL
             ORDER BY name, id;
             """;
 
@@ -33,7 +35,7 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
     {
         const string sql = """
             SELECT id, name, street_name, suburb_name, city, province, postal_code, contact_name, contact_email, notes
-            FROM public.warehouses WHERE id = @id;
+            FROM public.warehouses WHERE id = @id AND archived_at IS NULL;
             """;
         await using var command = dataSource.CreateCommand(sql);
         command.Parameters.AddWithValue("id", id);
@@ -54,6 +56,34 @@ internal sealed class PostgresWarehouseRepository(NpgsqlDataSource dataSource)
         ContactEmail = reader.GetString(8),
         Notes = reader.GetString(9)
     };
+
+    public async Task<string?> LockActiveAsync(Guid id, DbTransaction transaction, CancellationToken token)
+    {
+        // NO KEY UPDATE allows audit foreign-key checks while existing item writes finish.
+        const string sql = "SELECT name FROM public.warehouses WHERE id = @id AND archived_at IS NULL FOR NO KEY UPDATE;";
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id);
+        return await command.ExecuteScalarAsync(token) as string;
+    }
+
+    public async Task<IReadOnlyList<Guid>> LockActiveBrandsAsync(Guid id, DbTransaction transaction, CancellationToken token)
+    {
+        const string sql = """
+            SELECT id FROM public.brands WHERE warehouse_id = @id AND archived_at IS NULL
+            ORDER BY id FOR NO KEY UPDATE;
+            """;
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("id", id);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        var ids = new List<Guid>();
+        while (await reader.ReadAsync(token)) ids.Add(reader.GetGuid(0));
+        return ids;
+    }
+
+    public async Task ArchiveAsync(Guid id, DbTransaction transaction, CancellationToken token)
+    {
+        await using var command = PostgresCommand.InTransaction(transaction,
+            "UPDATE public.warehouses SET archived_at = clock_timestamp() WHERE id = @id;").Bind("id", id);
+        await command.ExecuteNonQueryAsync(token);
+    }
 
     public async Task AddAsync(
         Warehouse warehouse,

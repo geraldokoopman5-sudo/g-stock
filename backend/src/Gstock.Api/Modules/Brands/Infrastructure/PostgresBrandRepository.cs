@@ -42,11 +42,17 @@ internal sealed class PostgresBrandRepository(NpgsqlDataSource source)
     public async Task<Brand> InsertAsync(Guid warehouseId, string name, string description, byte[]? photo,
         DbTransaction transaction, CancellationToken token)
     {
+        // Serialize brand creation with warehouse archiving, including a fresh active check after waiting.
+        const string lockSql = "SELECT id FROM public.warehouses WHERE id = @warehouse AND archived_at IS NULL FOR SHARE;";
+        await using (var warehouse = PostgresCommand.InTransaction(transaction, lockSql).Bind("warehouse", warehouseId))
+        {
+            if (await warehouse.ExecuteScalarAsync(token) is null) throw Shared.Api.ApiError.Missing("Warehouse");
+        }
         // A missing warehouse leaves the SELECT empty and inserts no brand.
         const string sql = """
             INSERT INTO public.brands (id, warehouse_id, brand_name, description, profile_photo, photo_updated_at)
             SELECT @id, id, @name, @description, @photo, CASE WHEN @photo IS NULL THEN NULL ELSE clock_timestamp() END
-            FROM public.warehouses WHERE id = @warehouse
+            FROM public.warehouses WHERE id = @warehouse AND archived_at IS NULL
             RETURNING date_added, photo_updated_at;
             """;
         var id = Guid.NewGuid();

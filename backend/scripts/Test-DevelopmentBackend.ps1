@@ -129,6 +129,10 @@ foreach ($skuValue in @($null, '', '   ')) {
         mode = 'add'; quantity = 1; expectedQuantity = 2; reason = 'Generated SKU smoke test'
     }
     if ($updatedItem.sku -cne $generatedItem.sku) { throw 'A quantity change replaced the generated SKU.' }
+    $null = Invoke-SmokeRequest Delete $generatedPath 409 $clerk
+    $null = Invoke-SmokeRequest Post "$generatedPath/adjustments" 200 $clerk -Body @{
+        mode = 'set'; quantity = 0; expectedQuantity = 3; reason = 'Empty stock before deletion'
+    }
     $null = Invoke-SmokeRequest Delete $generatedPath 204 $clerk
 }
 

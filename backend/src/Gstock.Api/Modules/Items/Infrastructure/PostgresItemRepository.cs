@@ -108,6 +108,32 @@ internal sealed class PostgresItemRepository(NpgsqlDataSource source)
         await command.ExecuteNonQueryAsync(token);
     }
 
+    // Call while holding the parent brand lock, which every stock write also takes.
+    public async Task<IReadOnlyList<InventoryItems>> ArchiveEmptyBrandItemsAsync(
+        Guid brandId, DbTransaction transaction, CancellationToken token)
+    {
+        const string checkSql = """
+            SELECT EXISTS (SELECT 1 FROM public.inventory_items
+                WHERE brand_id = @brand AND archived_at IS NULL AND quantity <> 0);
+            """;
+        await using (var check = PostgresCommand.InTransaction(transaction, checkSql).Bind("brand", brandId))
+        {
+            if (await check.ExecuteScalarAsync(token) is true)
+                throw Shared.Api.ApiError.Conflict("All items must have zero stock before deletion.");
+        }
+
+        const string sql = $"""
+            UPDATE public.inventory_items SET archived_at = clock_timestamp()
+            WHERE brand_id = @brand AND archived_at IS NULL AND quantity = 0
+            RETURNING {Columns};
+            """;
+        await using var command = PostgresCommand.InTransaction(transaction, sql).Bind("brand", brandId);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        var items = new List<InventoryItems>();
+        while (await reader.ReadAsync(token)) items.Add(Read(reader));
+        return items;
+    }
+
     private static InventoryItems Read(NpgsqlDataReader reader) => new(
         reader.GetGuid(0), reader.GetGuid(1), reader.GetGuid(2), reader.GetString(3),
         reader.NullableText(4), reader.GetInt32(5), reader.GetString(6), reader.GetDateTime(7),

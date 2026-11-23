@@ -121,6 +121,7 @@ export function applyInventoryAction(state: InventoryState, actor: InventoryActo
     return record({ type: 'item-created', entityId: item.id, entityName: item.name, warehouseId: brand.warehouseId, brandId: brand.id, quantity: item.quantity, unit: item.unit, reason: 'Opening stock' }, { ...catalog, items: [...catalog.items, item] })
   }
 
+  if (action.type === 'delete-item' || action.type === 'delete-brand' || action.type === 'delete-warehouse') return { ok: false, error: 'Records are deleted through the connected G-Stock API.' }
   if (action.type === 'set-brand-photo' || action.type === 'set-item-photo') return { ok: false, error: 'Pictures are saved through the connected G-Stock API.' }
   const item = catalog.items.find((entry) => entry.id === action.itemId)
   if (!item) return { ok: false, error: 'This stock item could not be found.' }

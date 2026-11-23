@@ -98,6 +98,15 @@ export function changeEmployeeAccountType(id: string, accountRole: EmployeeAccou
 
 export async function saveInventory(action: InventoryAction) {
   switch (action.type) {
+    case 'delete-item':
+      await api.request<void>(`/items/${encodeURIComponent(action.itemId)}`, { method: 'DELETE' })
+      return { id: action.itemId }
+    case 'delete-brand':
+      await api.request<void>(`/brands/${encodeURIComponent(action.brandId)}`, { method: 'DELETE' })
+      return { id: action.brandId }
+    case 'delete-warehouse':
+      await api.request<void>(`/warehouses/${encodeURIComponent(action.warehouseId)}`, { method: 'DELETE' })
+      return { id: action.warehouseId }
     case 'add-warehouse': return api.request<InventoryWarehouse>('/warehouses', jsonBody(action.input))
     case 'add-brand': return api.request<InventoryBrand>('/brands', jsonBody(action.input))
     case 'add-item': return api.request<InventoryItem>('/items', jsonBody(action.input))

@@ -5,6 +5,7 @@ import WorkspaceIcon from './WorkspaceIcon'
 import type { WorkspacePermissions } from '../api/workspace'
 import InventoryEditor from './InventoryEditor'
 import InventoryPhoto from './InventoryPhoto'
+import InventoryDeleteButton from './InventoryDeleteButton'
 import type { InventoryEditorSelection } from './InventoryEditor'
 import InventoryActivity from './InventoryActivity'
 import ListPagination from './ListPagination'
@@ -74,6 +75,9 @@ export default function Inventory({ selectedBrandId, selectedItemId, catalog = e
       </div>
       {onAction && <div className="stock-actions inventory__actions">
         {brand && permissions?.canManageBrands !== false && <button className="stock-button" type="button" onClick={() => setEditor({ mode: 'brand-photo', brandId: brand.id })}>{brand.hasProfilePhoto ? 'Change brand picture' : 'Add brand picture'}</button>}
+        {brand && permissions?.canManageBrands === true && <InventoryDeleteButton action={{ type: 'delete-brand', brandId: brand.id }} name={brand.name}
+          disabledReason={allBrandItems.some((item) => item.quantity !== 0) ? 'All items must be at zero stock.' : undefined} onSave={onAction}
+          onDeleted={() => { setFeedback('Brand and its zero-stock items deleted.'); window.location.hash = 'inventory' }} />}
         {!brand && <><button className="stock-button" type="button" disabled={permissions?.canCreateWarehouse === false} onClick={() => setEditor({ mode: 'warehouse' })}>Add warehouse</button><button className="stock-button" type="button" disabled={!catalog.warehouses.length || permissions?.canManageBrands === false} onClick={() => setEditor({ mode: 'brand', warehouseId: warehouseId === 'all' ? undefined : warehouseId })}>Add brand</button></>}
         <button className="stock-button stock-button--primary" type="button" disabled={!catalog.brands.length || permissions?.canManageItems === false} onClick={() => setEditor({ mode: 'item', brandId: brand?.id, warehouseId: brand?.warehouseId ?? (warehouseId === 'all' ? undefined : warehouseId) })}>Add stock</button>
         {!brand && <a className="stock-button" href="#warehouses">View warehouses</a>}
@@ -97,6 +101,9 @@ export default function Inventory({ selectedBrandId, selectedItemId, catalog = e
         <div className="stock-actions">
           {onAction && permissions?.canManageItems !== false && <button className="stock-button stock-button--primary" type="button" onClick={() => setEditor({ mode: 'quantity', itemId: selectedItem.id })}>Update quantity</button>}
           {onAction && permissions?.canManageItems !== false && <button className="stock-button" type="button" onClick={() => setEditor({ mode: 'item-photo', itemId: selectedItem.id })}>{selectedItem.hasProfilePhoto ? 'Change item picture' : 'Add item picture'}</button>}
+          {onAction && permissions?.canManageItems === true && <InventoryDeleteButton action={{ type: 'delete-item', itemId: selectedItem.id }} name={selectedItem.name}
+            disabledReason={selectedItem.quantity !== 0 ? 'Stock must be zero before deletion.' : undefined} onSave={onAction}
+            onDeleted={() => { setFeedback('Stock item deleted.'); window.location.hash = `inventory/${encodeURIComponent(selectedItem.brandId)}` }} />}
           <a className="stock-button" href={`#inventory/${encodeURIComponent(selectedItem.brandId)}`}>Back to brand items</a>
         </div>
       </section>}
@@ -127,7 +134,11 @@ export default function Inventory({ selectedBrandId, selectedItemId, catalog = e
                 return <tr key={item.id}><th scope="row"><div className="inventory__item-identity">
                   {item.hasProfilePhoto && <InventoryPhoto resource="items" id={item.id} hasPhoto version={item.photoUpdatedAt} alt={item.name} className="inventory-photo--thumbnail" />}
                   <div><a className="inventory__item-name" href={`#inventory/${encodeURIComponent(item.brandId)}/${encodeURIComponent(item.id)}`}>{item.name}</a>{item.sku && <span className="inventory__sku">{item.sku}</span>}</div>
-                </div></th><td><span className="inventory__location">{item.location}</span></td><td className="inventory__quantity">{item.quantity.toLocaleString('en-ZA')}<span>{item.unit}</span></td><td>{item.reorderLevel}<span className="inventory__unit"> {item.unit}</span></td><td><span className={`inventory__stock inventory__stock--${itemStatus}`}><i aria-hidden="true" />{stockStatusLabels[itemStatus]}</span></td>{onAction && <td><div className="stock-actions"><button type="button" className="stock-button stock-button--small" disabled={permissions?.canManageItems === false} aria-label={`Update quantity for ${item.name}`} onClick={() => setEditor({ mode: 'quantity', itemId: item.id })}>Update quantity</button><button type="button" className="stock-button stock-button--small" disabled={permissions?.canManageItems === false} aria-label={`Update picture for ${item.name}`} onClick={() => setEditor({ mode: 'item-photo', itemId: item.id })}>{item.hasProfilePhoto ? 'Change picture' : 'Add picture'}</button></div></td>}</tr>
+                </div></th><td><span className="inventory__location">{item.location}</span></td><td className="inventory__quantity">{item.quantity.toLocaleString('en-ZA')}<span>{item.unit}</span></td><td>{item.reorderLevel}<span className="inventory__unit"> {item.unit}</span></td><td><span className={`inventory__stock inventory__stock--${itemStatus}`}><i aria-hidden="true" />{stockStatusLabels[itemStatus]}</span></td>{onAction && <td><div className="stock-actions"><button type="button" className="stock-button stock-button--small" disabled={permissions?.canManageItems === false} aria-label={`Update quantity for ${item.name}`} onClick={() => setEditor({ mode: 'quantity', itemId: item.id })}>Update quantity</button><button type="button" className="stock-button stock-button--small" disabled={permissions?.canManageItems === false} aria-label={`Update picture for ${item.name}`} onClick={() => setEditor({ mode: 'item-photo', itemId: item.id })}>{item.hasProfilePhoto ? 'Change picture' : 'Add picture'}</button>
+                  {permissions?.canManageItems === true && <InventoryDeleteButton action={{ type: 'delete-item', itemId: item.id }} name={item.name}
+                    disabledReason={item.quantity !== 0 ? 'Stock must be zero before deletion.' : undefined} onSave={onAction}
+                    onDeleted={() => { setFeedback('Stock item deleted.'); if (selectedItemId === encodeURIComponent(item.id)) window.location.hash = `inventory/${encodeURIComponent(item.brandId)}` }} />}
+                </div></td>}</tr>
               })}</tbody>
             </table>
           </div>

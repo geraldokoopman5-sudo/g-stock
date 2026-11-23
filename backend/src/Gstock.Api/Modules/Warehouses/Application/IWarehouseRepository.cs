@@ -9,6 +9,10 @@ internal interface IWarehouseRepository
 
     Task<Warehouse?> FindAsync(Guid id, CancellationToken cancellationToken);
 
+    Task<string?> LockActiveAsync(Guid id, DbTransaction transaction, CancellationToken token);
+    Task<IReadOnlyList<Guid>> LockActiveBrandsAsync(Guid id, DbTransaction transaction, CancellationToken token);
+    Task ArchiveAsync(Guid id, DbTransaction transaction, CancellationToken token);
+
     Task AddAsync(
         Warehouse warehouse,
         DbTransaction transaction,

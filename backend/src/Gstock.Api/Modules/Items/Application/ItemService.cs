@@ -105,6 +105,10 @@ internal sealed class ItemService(
         {
             var actor = await employees.RequireRoleAsync(actorId, AccountRoles.Nemployee, transaction, ct);
             var item = await LockItemAsync(id, transaction, ct);
+            if (item.Quantity != 0)
+            {
+                throw ApiError.Conflict("Only items with zero stock can be deleted.");
+            }
             await items.ArchiveAsync(id, transaction, ct);
             await activity.AddAsync(Event("item-deleted", item, actor), transaction, ct);
             return true;

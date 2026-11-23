@@ -16,6 +16,12 @@ internal static class WarehouseEndpoints
             Guid id, IWarehouseRepository repository, CancellationToken token) =>
             await repository.FindAsync(id, token) is { } warehouse ? Results.Ok(warehouse) : Results.NotFound());
         warehouses.MapPost("", CreateAsync);
+        warehouses.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user,
+            [FromServices] WarehouseService service, CancellationToken token) =>
+        {
+            await service.ArchiveAsync(id, user.EmployeeId(), token);
+            return Results.NoContent();
+        });
     }
 
     private static async Task<IResult> CreateAsync(

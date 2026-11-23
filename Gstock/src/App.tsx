@@ -131,6 +131,15 @@ function App() {
       // Reflect a committed write immediately, even if refreshing activity later fails.
       setInventory((current) => {
         const catalog = current.catalog
+        if (action.type === 'delete-item') return { ...current, catalog: { ...catalog, items: catalog.items.filter((item) => item.id !== action.itemId) } }
+        if (action.type === 'delete-brand' || action.type === 'delete-warehouse') {
+          const removedBrands = new Set(catalog.brands.filter((brand) => action.type === 'delete-brand' ? brand.id === action.brandId : brand.warehouseId === action.warehouseId).map((brand) => brand.id))
+          return { ...current, catalog: {
+            warehouses: action.type === 'delete-warehouse' ? catalog.warehouses.filter((warehouse) => warehouse.id !== action.warehouseId) : catalog.warehouses,
+            brands: catalog.brands.filter((brand) => !removedBrands.has(brand.id)),
+            items: catalog.items.filter((item) => !removedBrands.has(item.brandId)),
+          } }
+        }
         if (action.type === 'add-warehouse') return { ...current, catalog: { ...catalog, warehouses: [...catalog.warehouses, entity as InventoryWarehouse] } }
         if (action.type === 'add-brand' || action.type === 'set-brand-photo') {
           const brand = entity as InventoryBrand
