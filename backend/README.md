@@ -21,7 +21,9 @@ dotnet run --project .\backend\src\Gstock.Api --launch-profile http -- --migrate
 
 The migration command applies pending SQL files from `backend/migrations` in filename order. It records each applied file in `public.schema_migrations`.
 
-Apply every migration in order through `007_inventory_deletion.sql`. Migration `003_frontend_fields.sql` introduced warehouse contacts and notes, item storage locations, and low-stock thresholds. Existing records receive empty text fields and a zero threshold.
+Apply every migration in order through `008_archive_oxford_sample_brand.sql`. Migration `003_frontend_fields.sql` introduced warehouse contacts and notes, item storage locations, and low-stock thresholds. Existing records receive empty text fields and a zero threshold.
+
+Migration `008_archive_oxford_sample_brand.sql` archives the retired Oxford sample brand and its items by the brand's exact ID and name. This one-time administrative cleanup preserves item quantities and existing history. Normal API deletion still requires zero stock. Databases without that sample brand are unaffected.
 
 Migration `007_inventory_deletion.sql` adds warehouse archiving and its activity event. Normal employees can delete items only at zero stock. Stock managers can delete brands and warehouses only when every active item within them is at zero stock; their remaining zero-stock items and brands are archived in the same transaction. These actions use `DELETE /api/v1/{items|brands|warehouses}/{id}` and preserve records and employee activity history. Warehouse deletion and brand creation are serialized, as are deletion and stock writes, so concurrent changes cannot leave active stock under an archived parent. Apply the migration before starting the updated API. To verify the rules, permissions, history, and concurrent writes against a disposable database, run `node backend/scripts/test-inventory-deletion.mjs` from the repository root.
 
