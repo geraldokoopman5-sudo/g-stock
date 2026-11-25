@@ -44,6 +44,20 @@ pwsh -NoProfile -File .\backend\scripts\Initialize-DevelopmentAuth.ps1
 pwsh -NoProfile -File .\backend\scripts\Initialize-DevelopmentAuth.ps1 -StaffManager
 ```
 
+## Populate the site with demo data
+
+After applying migrations, run this command against your configured database:
+
+```powershell
+dotnet run --project .\backend\src\Gstock.Api --launch-profile http -- --seed-demo
+```
+
+This adds 48 fictional employee accounts (39 employees, six stock managers, and three staff managers), five South African warehouses, 30 brands, and 180 products. Stock includes healthy, low, and out-of-stock quantities so the inventory and alerts have useful content. Demo employees use `DEMO-` employee numbers and reserved `@demo.gstock.example` email addresses; warehouse notes identify the sample catalogue.
+
+The command runs only in Development and uses the database configured in the backend environment. It is an explicit import, never part of API startup or migrations. Repeating it preserves existing records, passwords, stock changes, and archives. The import commits in one transaction. Each demo account has its own random, unrecorded password; continue signing in with your existing account. No shared demo login or fabricated activity history is added. Refresh the site after importing.
+
+Run `node backend/scripts/test-demo-seed.mjs` from the repository root to verify the import against a disposable PostgreSQL cluster, including repeat runs, preservation of edits, transaction rollback, and the Production guard. It uses the same PostgreSQL binary requirements as the account-type integration check below.
+
 ## Run the backend smoke test
 
 Create a development certificate if you need one. Then start the API and leave it running.

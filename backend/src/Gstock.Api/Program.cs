@@ -43,7 +43,7 @@ builder.Services.AddScoped<PostgresEmployeeRepository>();
 builder.Services.AddScoped<EmployeeService>();
 var app = builder.Build();
 
-if (args is ["--check-db"] or ["--migrate"] or [ProvisionDevelopmentEmployee.StockManagerCommand] or [ProvisionDevelopmentEmployee.StaffManagerCommand])
+if (args is ["--check-db"] or ["--migrate"] or [SeedDemoData.Command] or [ProvisionDevelopmentEmployee.StockManagerCommand] or [ProvisionDevelopmentEmployee.StaffManagerCommand])
 {
     await using (app)
     {
@@ -56,6 +56,10 @@ if (args is ["--check-db"] or ["--migrate"] or [ProvisionDevelopmentEmployee.Sto
         if (args[0] == "--migrate")
         {
             await SqlMigrationRunner.RunAsync(dataSource);
+        }
+        else if (args[0] == SeedDemoData.Command)
+        {
+            Environment.ExitCode = await SeedDemoData.RunAsync(dataSource);
         }
         else if (args[0] is ProvisionDevelopmentEmployee.StockManagerCommand or ProvisionDevelopmentEmployee.StaffManagerCommand)
         {
