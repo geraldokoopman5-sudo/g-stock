@@ -19,6 +19,8 @@
   --color-button-background: color-mix(in srgb, var(--color-nordic-blue) 92%, var(--color-ink));
   --color-button-hover: var(--color-strong-blue);
   --color-on-accent: var(--color-off-white);
+  --color-stock-alert: #b42318;
+  --color-stock-alert-rgb: 180 35 24;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -32,6 +34,8 @@
   --color-accent-text: var(--color-mist-blue);
   --color-button-background: var(--color-strong-blue);
   --color-button-hover: color-mix(in srgb, var(--color-strong-blue) 85%, var(--color-mist-blue));
+  --color-stock-alert: #ff8a80;
+  --color-stock-alert-rgb: 255 138 128;
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }

@@ -48,7 +48,7 @@
 .inventory-brand h3 { margin: 6px 0 10px; font-size: 24px; font-weight: 500; color: var(--color-text); letter-spacing: -.04em; }
 .inventory-brand__description { color: var(--color-text-secondary); font-size: 12px; line-height: 1.8; }
 .inventory-brand__counts { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin: 24px 0 20px; color: var(--color-text-secondary); font-size: 10px; line-height: 1.7; }
-.inventory-brand__counts > .inventory-brand__attention { color: var(--color-text); }
+.inventory-brand__counts > .inventory-brand__attention { color: var(--color-stock-alert); }
 .inventory-brand__footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 16px; border-top: 1px solid rgb(var(--color-mist-blue-rgb) / 0.502); color: var(--color-accent-text); font-size: 11px; }
 .inventory__breadcrumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; color: var(--color-text-secondary); font-size: 11px; }
 .inventory__breadcrumbs a, .inventory__back { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-text-secondary); text-decoration: none; }
@@ -76,7 +76,7 @@
 .inventory__unit { color: var(--color-text-secondary); font-size: 10px; }
 .inventory__stock { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border: 1px solid rgb(var(--color-nordic-blue-rgb) / 0.251); border-radius: 20px; background: rgb(var(--color-nordic-blue-rgb) / 0.051); color: var(--color-text-secondary); font-size: 10px; white-space: nowrap; }
 .inventory__stock i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
-.inventory__stock--low-stock { color: var(--color-text); border-color: var(--color-nordic-blue); border-style: dashed; background: rgb(var(--color-nordic-blue-rgb) / .12); }
+.inventory__stock--low-stock { color: var(--color-stock-alert); border-color: var(--color-stock-alert); border-style: dashed; background: rgb(var(--color-stock-alert-rgb) / .1); }
 .inventory__stock--out-of-stock { color: var(--color-text); border-color: var(--color-text); background: var(--color-surface); }
 .inventory__empty { display: flex; align-items: center; flex-direction: column; gap: 18px; padding: 64px 24px; border: 1px dashed var(--color-border); border-radius: 18px; color: var(--color-text-secondary); text-align: center; }
 .inventory__empty > svg { color: var(--color-accent-text); }
