@@ -1,6 +1,9 @@
-export type WorkspaceIconName = 'home' | 'inventory' | 'warehouses' | 'employees' | 'sun' | 'moon' | 'grid' | 'arrow' | 'logout' | 'alert'
+export type WorkspaceIconName = 'home' | 'inventory' | 'warehouses' | 'employees' | 'sun' | 'moon' | 'grid' | 'arrow' | 'logout' | 'alert' | 'pen' | 'trash' | 'gallery'
 
 const paths: Record<WorkspaceIconName, string[]> = {
+  pen: ['m16 3 5 5-12 12-6 1 1-6L16 3Z', 'm13 6 5 5', 'm4 15 5 5'],
+  trash: ['M3 6h18', 'M9 6V3h6v3', 'm5 6 1 15h12l1-15', 'M10 10v7M14 10v7'],
+  gallery: ['M8 3h13v14', 'M3 7h14v14H3z', 'm3 17 4-4 4 4 2-2 4 4', 'M12 11h.01'],
   alert: ['M12 3 2 21h20L12 3Z', 'M12 9v5M12 17h.01'],
   home: ['m3 10 9-7 9 7', 'M5 9v11h5v-6h4v6h5V9'],
   inventory: ['m12 3 9 5-9 5-9-5 9-5Z', 'M3 8v9l9 5 9-5V8', 'M12 13v9', 'm7.5 5.5 9 5'],

@@ -111,8 +111,8 @@ test('account cards show read-only job titles, staff-only Edit, and audit detail
   const detail = render({ selectedId: employee.id })
   assert.ok(detail.includes('reflective-card'))
   assert.ok(detail.includes(employee.employeeId))
-  assert.ok(detail.includes('>Edit</button>'))
-  assert.ok(render({ selectedId: employee.id, viewer: manager }).includes('>Edit</button>'))
+  assert.ok(detail.includes('aria-label="Edit"'))
+  assert.ok(render({ selectedId: employee.id, viewer: manager }).includes('aria-label="Edit"'))
   const updated = await model.updateEmployeeAccount(accounts, manager.id, employee.id, { ...employee, fullName: 'Updated Name' })
   const activity = render({ accounts: updated.accounts, selectedId: employee.id })
   assert.ok(activity.includes(manager.fullName))
@@ -180,11 +180,11 @@ test('API account roles restrict editing to staff managers targeting normal empl
   const stock = { ...manager, accountRole: 'StockManager', status: 'Active' }
   const apiAccounts = accounts.map((account) => ({ ...account, profile: account.profile.id === normal.id ? normal : { ...account.profile, accountRole: 'StaffManager', status: 'Active' } }))
   const render = (viewer, selectedId = normal.id) => renderToStaticMarkup(React.createElement(EmployeeAccounts, { accounts: apiAccounts, viewer, selectedId, onSave: async () => null }))
-  assert.ok(render(staff).includes('>Edit</button>'))
-  assert.ok(!render(normal).includes('>Edit</button>'))
-  assert.ok(!render(stock).includes('>Edit</button>'))
-  assert.ok(!render({ ...staff, status: 'InActive' }).includes('>Edit</button>'))
-  assert.ok(!render(staff, manager.id).includes('>Edit</button>'))
+  assert.ok(render(staff).includes('aria-label="Edit"'))
+  assert.ok(!render(normal).includes('aria-label="Edit"'))
+  assert.ok(!render(stock).includes('aria-label="Edit"'))
+  assert.ok(!render({ ...staff, status: 'InActive' }).includes('aria-label="Edit"'))
+  assert.ok(!render(staff, manager.id).includes('aria-label="Edit"'))
   assert.ok(!render(staff).includes('during this preview'))
 })
 
@@ -194,9 +194,9 @@ test('only active staff managers can open account creation', () => {
     accounts, viewer, onSave: async () => null, onCreate: async () => null,
   }))
   const staff = { ...manager, accountRole: 'StaffManager', status: 'Active' }
-  assert.ok(render(staff).includes('>Add employee account</button>'))
+  assert.ok(render(staff).includes('aria-label="Add employee account"'))
   for (const viewer of [employee, { ...staff, status: 'InActive' }, { ...staff, accountRole: 'StockManager' }, { ...staff, accountRole: 'Nemployee' }]) {
-    assert.ok(!render(viewer).includes('>Add employee account</button>'))
+    assert.ok(!render(viewer).includes('aria-label="Add employee account"'))
   }
 })
 

@@ -1,3 +1,4 @@
+import ActionIconButton from './ActionIconButton'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { InventoryDeleteAction, SaveInventoryAction } from '../types/inventory'
 import './InventoryManagement.css'
@@ -37,9 +38,9 @@ export default function InventoryDeleteButton({ action, name, disabledReason, on
   }
 
   return <div className="stock-delete">
-    <button ref={trigger} className="stock-button stock-button--danger stock-button--small" type="button"
+    <ActionIconButton icon="trash" label={label} ref={trigger} className="stock-button stock-button--danger stock-button--small" type="button"
       disabled={Boolean(disabledReason)} aria-label={`${label} ${name}`} aria-describedby={disabledReason ? `${id}-reason` : undefined}
-      onClick={() => { setError(''); setOpen(true) }}>{label}</button>
+      onClick={() => { setError(''); setOpen(true) }} />
     {disabledReason && <span id={`${id}-reason`} className="stock-delete__reason">{disabledReason}</span>}
     {open && <dialog ref={dialog} className="stock-dialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}
       onCancel={(event) => { event.preventDefault(); close() }}>
@@ -64,7 +65,7 @@ export default function InventoryDeleteButton({ action, name, disabledReason, on
           {error && <p className="stock-form__error" role="alert">{error}</p>}
           <div className="stock-form__actions">
             <button ref={cancel} className="stock-button" type="button" disabled={saving} onClick={close}>Cancel</button>
-            <button className="stock-button stock-button--danger" type="submit" disabled={saving || Boolean(disabledReason)}>{saving ? 'Deleting…' : label}</button>
+            <ActionIconButton icon="trash" label={saving ? 'Deleting…' : label} className="stock-button stock-button--danger" type="submit" aria-busy={saving} disabled={saving || Boolean(disabledReason)} />
           </div>
         </form>
       </div>

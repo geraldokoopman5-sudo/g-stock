@@ -1,8 +1,10 @@
+import ActionIconButton from './ActionIconButton'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { InventoryAction, InventoryCatalog, QuantityMode, SaveInventoryAction } from '../types/inventory'
 import { inventoryUnits, maxStockQuantity } from '../data/inventoryStore'
 import { readInventoryPhoto } from '../lib/inventoryPhotos'
 import InventoryPhoto from './InventoryPhoto'
+import WorkspaceIcon from './WorkspaceIcon'
 import './InventoryManagement.css'
 
 export interface InventoryEditorSelection {
@@ -117,7 +119,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
           </>}
           {selection.mode === 'item' && <>
             <div className="field"><label htmlFor={`${id}-brand`}>Brand</label><select id={`${id}-brand`} value={brandId} required onChange={(event) => setBrandId(event.target.value)}>{!availableBrands.length && <option value="">No brands for this warehouse</option>}{availableBrands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
-            {!availableBrands.length && warehouseId && <p className="stock-form__notice">A stock manager must add a brand before its stock can be added. {onAddBrand && <button type="button" onClick={() => onAddBrand(warehouseId)}>Add brand</button>}</p>}
+            {!availableBrands.length && warehouseId && <p className="stock-form__notice">A stock manager must add a brand before its stock can be added. {onAddBrand && <ActionIconButton icon="pen" label="Add brand" className="stock-button" type="button" onClick={() => onAddBrand(warehouseId)} />}</p>}
             <div className="field"><label htmlFor={`${id}-name`}>Item name</label><input id={`${id}-name`} value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} /></div>
             <p className="stock-form__notice">A unique SKU will be generated automatically when you save this item.</p>
             <div className="stock-location-wrap">
@@ -145,7 +147,9 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
           {(selection.mode === 'brand' || selection.mode === 'item' || photoEditor) && <div className="field stock-photo-upload">
             {photoEditor && <p className="stock-photo-upload__name">{existingPhoto?.name}</p>}
             <label htmlFor={`${id}-photo`}>{selection.mode === 'brand' || selection.mode === 'brand-photo' ? 'Brand picture' : 'Item picture'} {!photoEditor && <span>(optional)</span>}</label>
-            <input ref={fileInput} id={`${id}-photo`} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" aria-describedby={`${id}-photo-hint`} onChange={async (event) => {
+            <div className="stock-photo-upload__picker">
+            <WorkspaceIcon name="gallery" />
+            <input ref={fileInput} className="stock-photo-upload__input" id={`${id}-photo`} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" title="Choose picture" aria-describedby={`${id}-photo-hint`} onChange={async (event) => {
               const input = event.currentTarget
               const file = input.files?.[0]
               if (!file) return
@@ -157,9 +161,10 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
               catch (failure) { input.value = ''; setError(failure instanceof Error ? failure.message : 'The picture could not be read.') }
               finally { setReadingPhoto(false) }
             }} />
+            </div>
             <p id={`${id}-photo-hint`} className="stock-photo-upload__hint">PNG or JPEG, up to 1 MiB. {readingPhoto ? 'Reading picture...' : 'Choose a file to preview it before saving.'}</p>
-            {photo ? <div className="stock-photo-upload__preview"><img src={photo.preview} alt="Selected picture preview" /><button className="stock-button" type="button" onClick={() => { setPhoto(null); if (fileInput.current) fileInput.current.value = '' }}>Remove selected picture</button></div>
-              : photoEditor && existingPhoto?.hasProfilePhoto && !removePicture && <div className="stock-photo-upload__preview"><InventoryPhoto resource={selection.mode === 'brand-photo' ? 'brands' : 'items'} id={existingPhoto.id} hasPhoto version={existingPhoto.photoUpdatedAt} alt={existingPhoto.name} /><button className="stock-button" type="button" onClick={() => setRemovePicture(true)}>Remove saved picture</button></div>}
+            {photo ? <div className="stock-photo-upload__preview"><img src={photo.preview} alt="Selected picture preview" /><ActionIconButton icon="trash" label="Remove selected picture" className="stock-button" type="button" onClick={() => { setPhoto(null); if (fileInput.current) fileInput.current.value = '' }} /></div>
+              : photoEditor && existingPhoto?.hasProfilePhoto && !removePicture && <div className="stock-photo-upload__preview"><InventoryPhoto resource={selection.mode === 'brand-photo' ? 'brands' : 'items'} id={existingPhoto.id} hasPhoto version={existingPhoto.photoUpdatedAt} alt={existingPhoto.name} /><ActionIconButton icon="trash" label="Remove saved picture" className="stock-button" type="button" onClick={() => setRemovePicture(true)} /></div>}
             {removePicture && <p className="stock-photo-upload__hint">The saved picture will be removed when you save. <button className="stock-button" type="button" onClick={() => setRemovePicture(false)}>Undo</button></p>}
           </div>}
           {selection.mode === 'quantity' && <>
@@ -171,7 +176,7 @@ export default function InventoryEditor({ selection, catalog, onSave, onClose, o
             <div className="field"><label htmlFor={`${id}-reason`}>Reason for update</label><textarea id={`${id}-reason`} placeholder="e.g. Stock received, stock issued, or recount correction" value={reason} onChange={(event) => setReason(event.target.value)} required maxLength={500} rows={3} /></div>
           </>}
           {error && <p className="stock-form__error" role="alert">{error}</p>}
-          <div className="stock-form__actions"><button className="stock-button stock-button--primary" type="submit" disabled={(selection.mode === 'brand' && !warehouseId) || (selection.mode === 'item' && !brandId)}>{saving ? 'Saving...' : photoEditor ? 'Save picture' : selection.mode === 'quantity' ? 'Save quantity' : title}</button><button className="stock-button" type="button" onClick={onClose}>Cancel</button></div>
+          <div className="stock-form__actions"><ActionIconButton icon={photoEditor ? 'gallery' : 'pen'} label={saving ? 'Saving...' : photoEditor ? 'Save picture' : selection.mode === 'quantity' ? 'Save quantity' : title} className="stock-button stock-button--primary" type="submit" disabled={(selection.mode === 'brand' && !warehouseId) || (selection.mode === 'item' && !brandId)} /><button className="stock-button" type="button" onClick={onClose}>Cancel</button></div>
           </fieldset>
         </form>
       </div>

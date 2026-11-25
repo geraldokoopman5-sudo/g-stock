@@ -1,3 +1,4 @@
+import ActionIconButton from './ActionIconButton'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { EmployeeCreate } from '../types/employees'
 import { accountTypeLabels, employeeFieldLabels, employeeFields } from '../data/employeeAccounts'
@@ -94,7 +95,7 @@ export default function CreateEmployeeDialog({ onSave, onClose, onCreated }: Cre
             </div>
             {error && <p className="stock-form__error" role="alert">{error}</p>}
             <div className="stock-form__actions">
-              <button className="stock-button stock-button--primary" type="submit">{saving ? 'Creating account...' : 'Create account'}</button>
+              <ActionIconButton icon="pen" label={saving ? 'Creating account...' : 'Create account'} className="stock-button stock-button--primary" type="submit" />
               <button className="stock-button" type="button" onClick={onClose}>Cancel</button>
             </div>
           </fieldset>

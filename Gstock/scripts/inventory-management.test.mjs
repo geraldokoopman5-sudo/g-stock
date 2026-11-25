@@ -219,7 +219,7 @@ test('staff managers cannot add warehouses while stock managers and employees re
       catalog: state.catalog, activity: [], onAction: async () => ({ ok: false, error: 'Test only' }),
       permissions: { canCreateWarehouse: accountRole !== 'StaffManager', canManageBrands: false, canManageItems: false, canManageEmployees: accountRole === 'StaffManager' },
     }))
-    assert.equal(/disabled=""[^>]*>Add warehouse<\/button>/.test(warehouses), accountRole === 'StaffManager')
+    assert.equal(/<button[^>]*disabled=""[^>]*aria-label="Add warehouse"/.test(warehouses), accountRole === 'StaffManager')
   }
 })
 

@@ -1,3 +1,4 @@
+import ActionIconButton from './ActionIconButton'
 import { useEffect, useRef, useState } from 'react'
 import type { EmployeeAccount, EmployeeAccountType, EmployeeCreate, EmployeeDetails, EmployeeProfile, EmployeeUpdate } from '../types/employees'
 import { accountTypeLabels, canChangeAccountType, canEditEmployeeAccounts, canViewEmployeeAccounts, employeeFieldLabels, employeeFields, jobTitleLabel } from '../data/employeeAccounts'
@@ -115,7 +116,7 @@ function EmployeeAccountDetail({ account, viewer, onSave, onChangeAccountType }:
       <div className="employee-accounts__title">
         <div><p className="eyebrow">EMPLOYEE ACCOUNT</p><h1 ref={heading} id="employee-account-heading" tabIndex={-1}>{account.profile.fullName}</h1></div>
         <div className="employee-accounts__actions">
-          {canEdit && !editing && !changingType && <button className="account-button" type="button" onClick={() => { setEditing(true); setSaved(false) }}>Edit</button>}
+          {canEdit && !editing && !changingType && <ActionIconButton icon="pen" label="Edit" className="account-button" type="button" onClick={() => { setEditing(true); setSaved(false) }} />}
           {canChangeType && !editing && !changingType && <button className="account-button" type="button" onClick={() => { setChangingType(true); setSaved(false) }}>Change job title / account type</button>}
         </div>
       </div>
@@ -211,7 +212,7 @@ export default function EmployeeAccounts({ accounts, viewer, selectedId, onSave,
       <p className="eyebrow">G-STOCK / YOUR PEOPLE</p>
       <div className="employee-accounts__heading">
         <h1 id="employee-accounts-heading" ref={heading} tabIndex={-1}>Employee accounts</h1>
-        {canCreate && <button ref={createButton} className="account-button account-button--primary" type="button" onClick={() => { setCreating(true); setCreatedName('') }}>Add employee account</button>}
+        {canCreate && <ActionIconButton icon="pen" label="Add employee account" ref={createButton} className="account-button account-button--primary" type="button" onClick={() => { setCreating(true); setCreatedName('') }} />}
       </div>
       <p className="workspace__description">Find an employee and open their card.</p>
       {createdName && <p className="employee-accounts__saved" role="status">Account created for {createdName}. They can now sign in.</p>}
